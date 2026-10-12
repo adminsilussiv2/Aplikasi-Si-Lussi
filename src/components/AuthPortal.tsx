@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   UserPlus,
   LogIn,
@@ -6,6 +6,7 @@ import {
   Clock,
   AlertCircle,
   ArrowRight,
+  Radio,
 } from 'lucide-react';
 import { SiLussiLogo } from './SiLussiLogo';
 import {
@@ -19,7 +20,7 @@ interface AuthPortalProps {
   onLoginSuccess: (user: UserAccount) => void;
   onRegisterInspector: (
     newUser: Omit<UserAccount, 'id' | 'status' | 'registeredAt' | 'role'>
-  ) => UserAccount;
+  ) => Promise<UserAccount> | UserAccount;
 }
 
 export const AuthPortal: React.FC<AuthPortalProps> = ({
@@ -31,7 +32,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [pendingNotice, setPendingNotice] = useState<UserAccount | null>(null);
+  const [pendingNoticeId, setPendingNoticeId] = useState<string | null>(null);
 
   // Registration state
   const [regName, setRegName] = useState('');
@@ -40,14 +41,30 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   const [regJabatan, setRegJabatan] = useState('Inspektor Sungai Lapangan');
   const [regBalai, setRegBalai] = useState<BalaiPSDA>('BPSDA Jratun Seluna');
   const [regPassword, setRegPassword] = useState('');
-  const [regSuccessUser, setRegSuccessUser] = useState<UserAccount | null>(
-    null
+  const [regSubmitting, setRegSubmitting] = useState(false);
+  const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
+
+  // Live lookup of registered or pending user from real-time `users` prop
+  const liveRegisteredUser = useMemo(
+    () =>
+      registeredUserId
+        ? users.find((u) => u.id === registeredUserId) || null
+        : null,
+    [users, registeredUserId]
+  );
+
+  const livePendingNoticeUser = useMemo(
+    () =>
+      pendingNoticeId
+        ? users.find((u) => u.id === pendingNoticeId) || null
+        : null,
+    [users, pendingNoticeId]
   );
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    setPendingNotice(null);
+    setPendingNoticeId(null);
 
     const rawId = identifier.trim();
     const lowerId = rawId.toLowerCase();
@@ -71,13 +88,13 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     }
 
     if (matched.status === 'pending') {
-      setPendingNotice(matched);
+      setPendingNoticeId(matched.id);
       return;
     }
 
     if (matched.status === 'rejected') {
       setErrorMessage(
-        'Pengajuan akun Inspektor Anda ditolak oleh Administrator. Silakan hubungi pengelola Balai PSDA terkait.'
+        'Pengajuan akun Inspektor Anda ditolak oleh Administrator. Silakan daftar ulang atau hubungi pengelola Balai PSDA terkait.'
       );
       return;
     }
@@ -85,48 +102,70 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     onLoginSuccess(matched);
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (
-      !regName.trim() ||
-      !regNip.trim() ||
-      !regEmail.trim() ||
-      !regPassword.trim()
-    ) {
+    const cleanName = regName.trim();
+    const cleanNip = regNip.trim();
+    const compactNip = cleanNip.replace(/\s+/g, '');
+    const cleanEmail =
+      regEmail.trim() || `${compactNip.toLowerCase()}@pupr.jatengprov.go.id`;
+    const cleanPassword = regPassword.trim();
+
+    if (!cleanName || !cleanNip || !cleanPassword) {
       setErrorMessage(
-        'Mohon lengkapi seluruh kolom pendaftaran akun Inspektor.'
+        'Mohon lengkapi Nama Lengkap, NIP / ID Petugas, dan Kata Sandi.'
       );
       return;
     }
 
-    const exists = users.some(
+    const existing = users.find(
       (u) =>
-        u.email.toLowerCase() === regEmail.trim().toLowerCase() ||
-        u.nip.replace(/\s+/g, '') === regNip.trim().replace(/\s+/g, '')
+        u.nip.replace(/\s+/g, '') === compactNip ||
+        (Boolean(regEmail.trim()) &&
+          u.email.toLowerCase() === cleanEmail.toLowerCase())
     );
-    if (exists) {
+
+    if (existing && existing.status !== 'rejected') {
+      if (existing.status === 'pending') {
+        setRegisteredUserId(existing.id);
+        setErrorMessage(
+          `Akun dengan NIP "${cleanNip}" sudah terdaftar dan sedang berada dalam Antrean Persetujuan Administrator.`
+        );
+        return;
+      }
       setErrorMessage(
-        'NIP atau alamat email tersebut sudah terdaftar di sistem Si-Lussi.'
+        `NIP atau email tersebut sudah terdaftar dan aktif di sistem Si-Lussi. Silakan langsung Masuk Akun.`
       );
       return;
     }
 
-    const created = onRegisterInspector({
-      name: regName.trim(),
-      nip: regNip.trim(),
-      email: regEmail.trim(),
-      jabatan: regJabatan.trim() || 'Inspektor Sungai Lapangan',
-      balaiPsda: regBalai,
-      password: regPassword,
-    });
+    try {
+      setRegSubmitting(true);
+      const created = await onRegisterInspector({
+        name: cleanName,
+        nip: cleanNip,
+        email: cleanEmail,
+        jabatan: regJabatan.trim() || 'Inspektor Sungai Lapangan',
+        balaiPsda: regBalai,
+        password: cleanPassword,
+      });
 
-    setRegSuccessUser(created);
-    setRegName('');
-    setRegNip('');
-    setRegEmail('');
-    setRegPassword('');
+      setRegisteredUserId(created.id);
+      setRegName('');
+      setRegNip('');
+      setRegEmail('');
+      setRegPassword('');
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'Terjadi kendala saat mendaftarkan akun Inspektor.'
+      );
+    } finally {
+      setRegSubmitting(false);
+    }
   };
 
   return (
@@ -150,8 +189,6 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             onClick={() => {
               setMode('login');
               setErrorMessage(null);
-              setPendingNotice(null);
-              setRegSuccessUser(null);
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               mode === 'login'
@@ -167,7 +204,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             onClick={() => {
               setMode('register');
               setErrorMessage(null);
-              setPendingNotice(null);
+              setPendingNoticeId(null);
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               mode === 'register'
@@ -188,46 +225,114 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
           </div>
         )}
 
-        {/* Pending Account Notice */}
-        {pendingNotice && (
-          <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
-            <div className="flex items-center gap-2 font-semibold text-amber-800 mb-1">
-              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-              Akun Menunggu Persetujuan Administrator
-            </div>
-            <p className="leading-relaxed text-amber-800/90">
-              Halo <strong>{pendingNotice.name}</strong> ({pendingNotice.balaiPsda}
-              ), pendaftaran akun Inspektor Anda sedang menunggu verifikasi dari{' '}
-              <strong>Administrator Pengelola</strong>.
-            </p>
+        {/* Real-Time Pending Account Notice on Login Tab */}
+        {livePendingNoticeUser && mode === 'login' && (
+          <div
+            className={`mb-5 p-4 rounded-xl border text-xs ${
+              livePendingNoticeUser.status === 'approved'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}
+          >
+            {livePendingNoticeUser.status === 'approved' ? (
+              <>
+                <div className="flex items-center gap-2 font-semibold text-emerald-800 mb-1">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  Akun Anda Telah Disetujui Administrator!
+                </div>
+                <p className="leading-relaxed">
+                  Halo <strong>{livePendingNoticeUser.name}</strong>, akun
+                  Inspektor Anda sudah aktif secara real-time.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onLoginSuccess(livePendingNoticeUser)}
+                  className="mt-2.5 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  Masuk Sekarang <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 font-semibold text-amber-800 mb-1">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  Akun Menunggu Persetujuan Administrator (Real-Time)
+                </div>
+                <p className="leading-relaxed text-amber-800/90">
+                  Halo <strong>{livePendingNoticeUser.name}</strong> (
+                  {livePendingNoticeUser.balaiPsda}), pendaftaran akun Inspektor
+                  Anda sudah masuk di{' '}
+                  <strong>Antrean Persetujuan Akun Inspektor Baru</strong>.
+                  Halaman ini akan otomatis aktif begitu Administrator menyetujui.
+                </p>
+              </>
+            )}
           </div>
         )}
 
-        {/* Registration Success Notice */}
-        {regSuccessUser && mode === 'register' && (
-          <div className="mb-5 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
-            <div className="flex items-center gap-2 font-semibold text-emerald-800 mb-1">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              Pendaftaran Akun Inspektor Berhasil Dikirim
-            </div>
-            <p className="leading-relaxed">
-              Akun atas nama <strong>{regSuccessUser.name}</strong> (
-              {regSuccessUser.balaiPsda}) kini berstatus{' '}
-              <span className="font-semibold underline">
-                Menunggu Persetujuan Administrator
+        {/* Registration Real-Time Status Notice */}
+        {liveRegisteredUser && mode === 'register' && (
+          <div
+            className={`mb-5 p-4 rounded-xl border text-xs ${
+              liveRegisteredUser.status === 'approved'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                : 'bg-emerald-50/80 border-emerald-200 text-emerald-900'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2 font-semibold text-emerald-800">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                {liveRegisteredUser.status === 'approved'
+                  ? 'Akun Disetujui Administrator!'
+                  : 'Pendaftaran Masuk ke Antrean Real-Time'}
+              </div>
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700">
+                <Radio className="w-3 h-3 animate-pulse" />
+                LIVE
               </span>
-              .
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setMode('login');
-                setIdentifier(regSuccessUser.nip);
-              }}
-              className="mt-3 inline-flex items-center gap-1.5 font-semibold text-[#0B2C5F] hover:underline cursor-pointer"
-            >
-              Kembali ke halaman Login <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </div>
+
+            {liveRegisteredUser.status === 'approved' ? (
+              <>
+                <p className="leading-relaxed">
+                  Akun Inspektor <strong>{liveRegisteredUser.name}</strong> (NIP:{' '}
+                  <span className="font-mono">{liveRegisteredUser.nip}</span>)
+                  telah disetujui oleh Administrator.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onLoginSuccess(liveRegisteredUser)}
+                  className="mt-3 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  Langsung Masuk ke Portal <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="leading-relaxed">
+                  Akun atas nama <strong>{liveRegisteredUser.name}</strong> (NIP:{' '}
+                  <span className="font-mono">{liveRegisteredUser.nip}</span> ·{' '}
+                  {liveRegisteredUser.balaiPsda}) sudah langsung tampil secara{' '}
+                  <strong>real-time</strong> pada{' '}
+                  <span className="font-semibold underline">
+                    Antrean Persetujuan Akun Inspektor Baru
+                  </span>{' '}
+                  di halaman Administrator.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    setIdentifier(liveRegisteredUser.nip);
+                    setPendingNoticeId(liveRegisteredUser.id);
+                  }}
+                  className="mt-3 inline-flex items-center gap-1.5 font-semibold text-[#0B2C5F] hover:underline cursor-pointer"
+                >
+                  Buka halaman Login ({liveRegisteredUser.nip}){' '}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -273,7 +378,8 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
           <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Nama Lengkap &amp; Gelar Inspektor
+                Nama Lengkap &amp; Gelar Inspektor{' '}
+                <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
@@ -288,7 +394,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  NIP / ID Petugas
+                  NIP / ID Petugas <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -302,7 +408,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Unit Kerja Balai PSDA
+                  Unit Kerja Balai PSDA <span className="text-red-600">*</span>
                 </label>
                 <select
                   value={regBalai}
@@ -321,11 +427,10 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email Kedinasan
+                  Email Kedinasan (Opsional)
                 </label>
                 <input
-                  type="email"
-                  required
+                  type="text"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   placeholder="nama@pupr.jatengprov.go.id"
@@ -349,24 +454,27 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Kata Sandi Baru
+                Kata Sandi Baru <span className="text-red-600">*</span>
               </label>
               <input
                 type="password"
                 required
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
-                placeholder="Minimal 6 karakter"
+                placeholder="Masukkan kata sandi akun"
                 className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-[#1B65A6] outline-none"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-2.5 px-4 bg-[#1B65A6] hover:bg-[#0B2C5F] text-white font-semibold text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              disabled={regSubmitting}
+              className="w-full py-2.5 px-4 bg-[#1B65A6] hover:bg-[#0B2C5F] disabled:opacity-60 text-white font-semibold text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
-              Ajukan Pendaftaran Akun Inspektor
+              {regSubmitting
+                ? 'Mengirim Pendaftaran Real-Time...'
+                : 'Ajukan Pendaftaran Akun Inspektor'}
             </button>
           </form>
         )}
