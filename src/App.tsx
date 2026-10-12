@@ -33,6 +33,12 @@ import { DashboardAnalytics } from './components/DashboardAnalytics';
 import { InspectionInputWorkspace } from './components/InspectionInputWorkspace';
 import { InspectionDetailModal } from './components/InspectionDetailModal';
 import { AdminManagementView } from './components/AdminManagementView';
+import {
+  createFirestoreActivityLog,
+  subscribeFirestoreAccounts,
+  subscribeFirestoreLogs,
+  upsertFirestoreAccount,
+} from './firebase';
 
 const STORAGE_KEYS = {
   USERS: 'silussi_v2_jateng_users_v6',
@@ -250,9 +256,49 @@ export default function App() {
     }
   }, [applyIncomingRealtimeUsers]);
 
-  // Real-time synchronization: Initial sync + 1.2s fast polling + BroadcastChannel + Storage Event
+  // Real-time synchronization: Cloud Firestore onSnapshot (cross-device) + Server API + BroadcastChannel + Storage Event
   useEffect(() => {
-    // 1. Initial merge of client localStorage users into server store
+    let hasSeededFirestore = false;
+
+    // 1. Subscribe to Cloud Firestore inspector_accounts for instant cross-device sync (ais-dev, ais-pre, mobile, desktop)
+    const unsubAccounts = subscribeFirestoreAccounts((remoteAccounts) => {
+      if (!hasSeededFirestore) {
+        hasSeededFirestore = true;
+        const remoteIds = new Set(remoteAccounts.map((u) => u.id));
+        const remoteNips = new Set(
+          remoteAccounts.map((u) => `${u.role}:${u.nip.replace(/\s+/g, '')}`)
+        );
+        for (const localUser of usersRef.current) {
+          const nipKey = `${localUser.role}:${localUser.nip.replace(/\s+/g, '')}`;
+          if (!remoteIds.has(localUser.id) && !remoteNips.has(nipKey)) {
+            upsertFirestoreAccount(localUser).catch(() => {});
+          }
+        }
+      }
+      if (remoteAccounts.length > 0) {
+        applyIncomingRealtimeUsers(remoteAccounts);
+      }
+    });
+
+    // 2. Subscribe to Cloud Firestore activity_logs for cross-device audit log
+    const unsubLogs = subscribeFirestoreLogs((remoteLogs) => {
+      if (remoteLogs.length > 0) {
+        setActivityLogs((prev) => {
+          const map = new Map<string, ActivityLog>();
+          for (const item of [...remoteLogs, ...prev]) {
+            if (item && item.id) {
+              map.set(item.id, item);
+            }
+          }
+          return Array.from(map.values()).sort(
+            (a, b) =>
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+        });
+      }
+    });
+
+    // 3. Initial merge of client localStorage users into server store
     fetch('/api/users/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -266,12 +312,12 @@ export default function App() {
       })
       .catch(() => {});
 
-    // 2. Fast polling every 1.2s to guarantee real-time sync across tabs/devices/browsers
+    // 4. Fast polling fallback every 2s
     const pollTimer = setInterval(() => {
       syncUsersWithServer();
-    }, 1200);
+    }, 2000);
 
-    // 3. BroadcastChannel for instant 0ms same-browser multi-tab sync
+    // 5. BroadcastChannel for instant 0ms same-browser multi-tab sync
     let bc: BroadcastChannel | null = null;
     try {
       bc = new BroadcastChannel(REALTIME_CHANNEL_NAME);
@@ -284,7 +330,7 @@ export default function App() {
       // Ignore if BroadcastChannel unsupported
     }
 
-    // 4. Window storage event listener for cross-tab localStorage updates
+    // 6. Window storage event listener for cross-tab localStorage updates
     const handleStorageEvent = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.USERS && e.newValue) {
         try {
@@ -300,6 +346,8 @@ export default function App() {
     window.addEventListener('storage', handleStorageEvent);
 
     return () => {
+      unsubAccounts();
+      unsubLogs();
       clearInterval(pollTimer);
       bc?.close();
       window.removeEventListener('storage', handleStorageEvent);
@@ -347,6 +395,7 @@ export default function App() {
       relatedId,
     };
     setActivityLogs((prev) => [newLog, ...prev]);
+    createFirestoreActivityLog(newLog).catch(() => {});
   };
 
   const handleLoginSuccess = (user: UserAccount) => {
@@ -368,9 +417,23 @@ export default function App() {
     newUserData: Omit<UserAccount, 'id' | 'status' | 'registeredAt' | 'role'>
   ): Promise<UserAccount> => {
     const nowIso = new Date().toISOString();
+    const compactNip = (newUserData.nip || '')
+      .replace(/\s+/g, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '');
+    const existingInspector = usersRef.current.find(
+      (u) =>
+        u.role === 'inspector' &&
+        u.nip.replace(/\s+/g, '') === (newUserData.nip || '').replace(/\s+/g, '')
+    );
+    const accountId =
+      existingInspector?.id ||
+      (compactNip
+        ? `usr-insp-${compactNip.slice(0, 48)}`
+        : `usr-insp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
+
     const optimisticAccount: UserAccount = {
       ...newUserData,
-      id: `usr-insp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: accountId,
       role: 'inspector',
       status: 'pending',
       registeredAt: nowIso,
@@ -384,10 +447,24 @@ export default function App() {
     setUsers(optimisticUsers);
     broadcastLocalUsers(optimisticUsers);
 
-    // 2. Sync to authoritative server store
+    // 2. Persist immediately to Cloud Firestore so ALL devices (phone, laptop, ais-pre, ais-dev) receive it via onSnapshot
+    try {
+      await upsertFirestoreAccount(optimisticAccount);
+    } catch {
+      // Handled by Firestore helper
+    }
+
+    appendActivityLog(
+      optimisticAccount,
+      'REGISTER_ACCOUNT',
+      `Mengajukan pendaftaran akun Inspektor baru: ${optimisticAccount.name}`,
+      `NIP ${optimisticAccount.nip} — Unit Kerja: ${optimisticAccount.balaiPsda} (Status: Menunggu Persetujuan Administrator)`
+    );
+
+    // 3. Also sync to local Express store
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
       const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -398,34 +475,20 @@ export default function App() {
 
       if (response.ok) {
         const data = await response.json();
-        const serverUser: UserAccount = data.user || optimisticAccount;
+        const serverUser: UserAccount = {
+          ...(data.user || optimisticAccount),
+          id: optimisticAccount.id,
+        };
         const mergedUsers = Array.isArray(data.users)
-          ? mergeUsersList(data.users, [serverUser])
+          ? mergeUsersList([serverUser], data.users)
           : optimisticUsers;
 
         setUsers(mergedUsers);
-        if (Array.isArray(data.activityLogs)) {
-          setActivityLogs(data.activityLogs);
-        }
-        broadcastLocalUsers(mergedUsers, data.activityLogs);
-
-        if (currentUser?.role === 'admin') {
-          showToast(
-            `Akun Inspektor ${serverUser.name} berhasil ditambahkan ke Antrean Persetujuan.`
-          );
-        }
-        return serverUser;
+        broadcastLocalUsers(mergedUsers);
       }
     } catch {
-      // Optimistic registration already saved locally and broadcasted
+      // Cloud Firestore & local state already updated
     }
-
-    appendActivityLog(
-      optimisticAccount,
-      'REGISTER_ACCOUNT',
-      'Mengajukan pendaftaran akun Inspektor baru',
-      `NIP ${optimisticAccount.nip} — Unit Kerja: ${optimisticAccount.balaiPsda} (Status: Menunggu Persetujuan Administrator)`
-    );
 
     if (currentUser?.role === 'admin') {
       showToast(
@@ -441,34 +504,41 @@ export default function App() {
     if (!target) return;
 
     const nowIso = new Date().toISOString();
+    const approvedUser: UserAccount = {
+      ...target,
+      status: 'approved',
+      approvedAt: nowIso,
+      approvedBy: currentUser.name,
+    };
     const updatedUsers = users.map((u) =>
-      u.id === userId
-        ? {
-            ...u,
-            status: 'approved' as const,
-            approvedAt: nowIso,
-            approvedBy: currentUser.name,
-          }
-        : u
+      u.id === userId ? approvedUser : u
     );
     setUsers(updatedUsers);
     broadcastLocalUsers(updatedUsers);
 
+    // 1. Update Cloud Firestore immediately for cross-device sync
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(userId)}/approve`, {
+      await upsertFirestoreAccount(approvedUser);
+    } catch {
+      // Handled by Firestore helper
+    }
+
+    appendActivityLog(
+      currentUser,
+      'APPROVE_ACCOUNT',
+      `Menyetujui pendaftaran akun Inspektor ${target.name}`,
+      `NIP ${target.nip} (${target.balaiPsda}) kini aktif dan dapat menginput blangko penilaian sungai.`
+    );
+
+    // 2. Also update local server store
+    try {
+      await fetch(`/api/users/${encodeURIComponent(userId)}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approvedBy: currentUser.name }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.users)) {
-          setUsers(data.users);
-          broadcastLocalUsers(data.users, data.activityLogs);
-        }
-      }
     } catch {
-      // Optimistic state already applied
+      // Cloud Firestore & optimistic state already applied
     }
 
     showToast(`Akun Inspektor ${target.name} telah disetujui dan diaktifkan.`);
@@ -479,27 +549,41 @@ export default function App() {
     const target = users.find((u) => u.id === userId);
     if (!target) return;
 
+    const rejectedUser: UserAccount = {
+      ...target,
+      status: 'rejected',
+      approvedAt: new Date().toISOString(),
+      approvedBy: currentUser.name,
+    };
     const updatedUsers = users.map((u) =>
-      u.id === userId ? { ...u, status: 'rejected' as const } : u
+      u.id === userId ? rejectedUser : u
     );
     setUsers(updatedUsers);
     broadcastLocalUsers(updatedUsers);
 
+    // 1. Update Cloud Firestore immediately for cross-device sync
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(userId)}/reject`, {
+      await upsertFirestoreAccount(rejectedUser);
+    } catch {
+      // Handled by Firestore helper
+    }
+
+    appendActivityLog(
+      currentUser,
+      'REJECT_ACCOUNT',
+      `Menolak pengajuan akun Inspektor ${target.name}`,
+      `NIP ${target.nip} (${target.balaiPsda}) ditolak oleh Administrator.`
+    );
+
+    // 2. Also update local server store
+    try {
+      await fetch(`/api/users/${encodeURIComponent(userId)}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rejectedBy: currentUser.name }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.users)) {
-          setUsers(data.users);
-          broadcastLocalUsers(data.users, data.activityLogs);
-        }
-      }
     } catch {
-      // Optimistic state already applied
+      // Cloud Firestore & optimistic state already applied
     }
 
     showToast(`Pengajuan akun ${target.name} telah ditolak.`);

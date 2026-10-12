@@ -1,0 +1,205 @@
+{
+  "entities": {
+    "InspectorAccount": {
+      "title": "InspectorAccount",
+      "description": "Account record for Si-Lussi v2 Administrator and River Inspectors across 6 Balai PSDA in Central Java.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique account identifier",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name and title of the officer",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "email": {
+          "type": "string",
+          "description": "Institutional email address",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "password": {
+          "type": "string",
+          "description": "Account password for NIP portal login",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "nip": {
+          "type": "string",
+          "description": "Nomor Induk Pegawai (NIP) or officer ID",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "jabatan": {
+          "type": "string",
+          "description": "Position or functional role title",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "balaiPsda": {
+          "type": "string",
+          "description": "Assigned Balai PSDA unit",
+          "enum": [
+            "BPSDA Pemali Comal",
+            "BPSDA Bodri Kuto",
+            "BPSDA Jratun Seluna",
+            "BPSDA Bengawan Solo",
+            "BPSDA Progo Bogowonto Lukulo",
+            "BPSDA Serayu Bogowonto"
+          ]
+        },
+        "role": {
+          "type": "string",
+          "description": "System role",
+          "enum": ["admin", "inspector"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Verification status in administrator approval queue",
+          "enum": ["pending", "approved", "rejected"]
+        },
+        "registeredAt": {
+          "type": "string",
+          "description": "ISO timestamp of registration",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "approvedAt": {
+          "type": "string",
+          "description": "ISO timestamp of approval",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "approvedBy": {
+          "type": "string",
+          "description": "Name of administrator who approved the account",
+          "minLength": 0,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "password",
+        "nip",
+        "jabatan",
+        "balaiPsda",
+        "role",
+        "status",
+        "registeredAt"
+      ]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Real-time audit log of account registrations, approvals, and river inspections.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique log identifier",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of event",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "actorId": {
+          "type": "string",
+          "description": "User ID of the actor",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "actorName": {
+          "type": "string",
+          "description": "Full name of the actor",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "actorRole": {
+          "type": "string",
+          "description": "Role of the actor",
+          "enum": ["admin", "inspector"]
+        },
+        "actorBalai": {
+          "type": "string",
+          "description": "Balai PSDA of the actor",
+          "enum": [
+            "BPSDA Pemali Comal",
+            "BPSDA Bodri Kuto",
+            "BPSDA Jratun Seluna",
+            "BPSDA Bengawan Solo",
+            "BPSDA Progo Bogowonto Lukulo",
+            "BPSDA Serayu Bogowonto"
+          ]
+        },
+        "actionType": {
+          "type": "string",
+          "description": "Type of activity logged",
+          "enum": [
+            "LOGIN",
+            "REGISTER_ACCOUNT",
+            "APPROVE_ACCOUNT",
+            "REJECT_ACCOUNT",
+            "CREATE_INSPECTION",
+            "UPDATE_FOLLOWUP",
+            "EXPORT_REPORT"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short summary of the action",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "detail": {
+          "type": "string",
+          "description": "Detailed description of the action",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "relatedId": {
+          "type": "string",
+          "description": "Optional related inspection or account ID",
+          "minLength": 0,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "id",
+        "timestamp",
+        "actorId",
+        "actorName",
+        "actorRole",
+        "actorBalai",
+        "actionType",
+        "summary",
+        "detail"
+      ]
+    }
+  },
+  "firestore": {
+    "/inspector_accounts/{accountId}": {
+      "schema": {
+        "$ref": "#/entities/InspectorAccount"
+      },
+      "description": "Stores Administrator and Inspector user accounts and pending registrations across devices."
+    },
+    "/activity_logs/{logId}": {
+      "schema": {
+        "$ref": "#/entities/ActivityLog"
+      },
+      "description": "Stores real-time activity logs for registrations, approvals, and inspection events."
+    }
+  }
+}

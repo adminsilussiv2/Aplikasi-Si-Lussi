@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidBalai(balai) {
+      return balai is string && balai in [
+        'BPSDA Pemali Comal',
+        'BPSDA Bodri Kuto',
+        'BPSDA Jratun Seluna',
+        'BPSDA Bengawan Solo',
+        'BPSDA Progo Bogowonto Lukulo',
+        'BPSDA Serayu Bogowonto'
+      ];
+    }
+
+    function isValidInspectorAccount(data, accountId) {
+      return data.keys().hasAll([
+          'id',
+          'name',
+          'email',
+          'password',
+          'nip',
+          'jabatan',
+          'balaiPsda',
+          'role',
+          'status',
+          'registeredAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'name',
+          'email',
+          'password',
+          'nip',
+          'jabatan',
+          'balaiPsda',
+          'role',
+          'status',
+          'registeredAt',
+          'approvedAt',
+          'approvedBy'
+        ]) &&
+        data.id is string && data.id == accountId && isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
+        data.email is string && data.email.size() >= 1 && data.email.size() <= 160 &&
+        data.password is string && data.password.size() >= 1 && data.password.size() <= 128 &&
+        data.nip is string && data.nip.size() >= 1 && data.nip.size() <= 64 &&
+        data.jabatan is string && data.jabatan.size() >= 1 && data.jabatan.size() <= 160 &&
+        isValidBalai(data.balaiPsda) &&
+        data.role is string && data.role in ['admin', 'inspector'] &&
+        (data.role == 'inspector' || accountId == 'usr-admin-01') &&
+        data.status is string && data.status in ['pending', 'approved', 'rejected'] &&
+        data.registeredAt is string && data.registeredAt.size() >= 1 && data.registeredAt.size() <= 64 &&
+        (!('approvedAt' in data) || (data.approvedAt is string && data.approvedAt.size() <= 64)) &&
+        (!('approvedBy' in data) || (data.approvedBy is string && data.approvedBy.size() <= 160));
+    }
+
+    function isValidActivityLog(data, logId) {
+      return data.keys().hasAll([
+          'id',
+          'timestamp',
+          'actorId',
+          'actorName',
+          'actorRole',
+          'actorBalai',
+          'actionType',
+          'summary',
+          'detail'
+        ]) &&
+        data.keys().hasOnly([
+          'id',
+          'timestamp',
+          'actorId',
+          'actorName',
+          'actorRole',
+          'actorBalai',
+          'actionType',
+          'summary',
+          'detail',
+          'relatedId'
+        ]) &&
+        data.id is string && data.id == logId && isValidId(data.id) &&
+        data.timestamp is string && data.timestamp.size() >= 1 && data.timestamp.size() <= 64 &&
+        data.actorId is string && data.actorId.size() >= 1 && data.actorId.size() <= 128 &&
+        data.actorName is string && data.actorName.size() >= 1 && data.actorName.size() <= 160 &&
+        data.actorRole is string && data.actorRole in ['admin', 'inspector'] &&
+        isValidBalai(data.actorBalai) &&
+        data.actionType is string && data.actionType in [
+          'LOGIN',
+          'REGISTER_ACCOUNT',
+          'APPROVE_ACCOUNT',
+          'REJECT_ACCOUNT',
+          'CREATE_INSPECTION',
+          'UPDATE_FOLLOWUP',
+          'EXPORT_REPORT'
+        ] &&
+        data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 500 &&
+        data.detail is string && data.detail.size() >= 1 && data.detail.size() <= 1000 &&
+        (!('relatedId' in data) || (data.relatedId is string && data.relatedId.size() <= 128));
+    }
+
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+      allow list, create, update, delete: if false;
+    }
+
+    match /inspector_accounts/{accountId} {
+      allow get: if isValidId(accountId);
+      allow list: if existing().role in ['admin', 'inspector'];
+      allow create: if isValidId(accountId) && isValidInspectorAccount(incoming(), accountId);
+      allow update: if isValidId(accountId) &&
+        isValidInspectorAccount(incoming(), accountId) &&
+        incoming().id == existing().id &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'nip',
+          'email',
+          'jabatan',
+          'balaiPsda',
+          'password',
+          'role',
+          'status',
+          'registeredAt',
+          'approvedAt',
+          'approvedBy'
+        ]);
+      allow delete: if false;
+    }
+
+    match /activity_logs/{logId} {
+      allow get: if isValidId(logId);
+      allow list: if existing().actorRole in ['admin', 'inspector'];
+      allow create: if isValidId(logId) && isValidActivityLog(incoming(), logId);
+      allow update, delete: if false;
+    }
+  }
+}
