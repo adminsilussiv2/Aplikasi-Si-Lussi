@@ -1,0 +1,171 @@
+{
+  "users": [
+    {
+      "id": "usr-admin-01",
+      "name": "Muhammad Irfan Rosyid, ST",
+      "email": "admin@pupr.jatengprov.go.id",
+      "password": "Silussi-v2",
+      "nip": "199806232022031010",
+      "jabatan": "Ahli Pertama - Teknik Pengairan",
+      "balaiPsda": "BPSDA Jratun Seluna",
+      "role": "admin",
+      "status": "approved",
+      "registeredAt": "2026-01-10T08:00:00.000Z",
+      "approvedAt": "2026-01-10T08:00:00.000Z",
+      "approvedBy": "Sistem DPUPR Jateng"
+    },
+    {
+      "id": "usr-insp-01",
+      "name": "Budi Santoso, S.T.",
+      "email": "budi.santoso@pupr.jatengprov.go.id",
+      "password": "password123",
+      "nip": "19890618 201402 1 002",
+      "jabatan": "Inspektor Sungai Lapangan",
+      "balaiPsda": "BPSDA Pemali Comal",
+      "role": "inspector",
+      "status": "approved",
+      "registeredAt": "2026-02-05T09:15:00.000Z",
+      "approvedAt": "2026-02-05T10:00:00.000Z",
+      "approvedBy": "Muhammad Irfan Rosyid, ST"
+    },
+    {
+      "id": "usr-insp-02",
+      "name": "Siti Rahmawati, S.T., M.Eng.",
+      "email": "siti.rahmawati@pupr.jatengprov.go.id",
+      "password": "password123",
+      "nip": "19911124 201503 2 005",
+      "jabatan": "Inspektor Operasi & Pemeliharaan",
+      "balaiPsda": "BPSDA Jratun Seluna",
+      "role": "inspector",
+      "status": "approved",
+      "registeredAt": "2026-02-12T08:30:00.000Z",
+      "approvedAt": "2026-02-12T11:20:00.000Z",
+      "approvedBy": "Muhammad Irfan Rosyid, ST"
+    },
+    {
+      "id": "usr-insp-03",
+      "name": "Agus Prasetyo, S.T.",
+      "email": "agus.prasetyo@pupr.jatengprov.go.id",
+      "password": "password123",
+      "nip": "19870309 201201 1 008",
+      "jabatan": "Inspektor Hidrologi & Alur",
+      "balaiPsda": "BPSDA Bengawan Solo",
+      "role": "inspector",
+      "status": "approved",
+      "registeredAt": "2026-03-01T08:00:00.000Z",
+      "approvedAt": "2026-03-01T09:45:00.000Z",
+      "approvedBy": "Muhammad Irfan Rosyid, ST"
+    },
+    {
+      "id": "usr-insp-04",
+      "name": "Dewi Lestari, S.T.",
+      "email": "dewi.lestari@pupr.jatengprov.go.id",
+      "password": "password123",
+      "nip": "19930815 201802 2 001",
+      "jabatan": "Inspektor Sungai & Sempadan",
+      "balaiPsda": "BPSDA Serayu Bogowonto",
+      "role": "inspector",
+      "status": "approved",
+      "registeredAt": "2026-03-10T08:00:00.000Z",
+      "approvedAt": "2026-03-10T10:15:00.000Z",
+      "approvedBy": "Muhammad Irfan Rosyid, ST"
+    },
+    {
+      "id": "usr-insp-pending-01",
+      "name": "Rizky Pratama, S.T.",
+      "email": "rizky.pratama@pupr.jatengprov.go.id",
+      "password": "password123",
+      "nip": "19950214 202203 1 003",
+      "jabatan": "Inspektor Pemantau Lapangan",
+      "balaiPsda": "BPSDA Pemali Comal",
+      "role": "inspector",
+      "status": "pending",
+      "registeredAt": "2026-10-09T14:20:00.000Z"
+    },
+    {
+      "id": "usr-insp-pending-02",
+      "name": "Wahyu Nugroho, S.T.",
+      "email": "wahyu.nugroho@pupr.jatengprov.go.id",
+      "password": "password123",
+      "nip": "19940928 202102 1 007",
+      "jabatan": "Inspektor Morfologi Sungai",
+      "balaiPsda": "BPSDA Serayu Bogowonto",
+      "role": "inspector",
+      "status": "pending",
+      "registeredAt": "2026-10-10T07:45:00.000Z"
+    }
+  ],
+  "activityLogs": [
+    {
+      "id": "log-006",
+      "timestamp": "2026-10-10T08:15:00.000Z",
+      "actorId": "usr-insp-04",
+      "actorName": "Dewi Lestari, S.T.",
+      "actorRole": "inspector",
+      "actorBalai": "BPSDA Serayu Bogowonto",
+      "actionType": "CREATE_INSPECTION",
+      "summary": "Menginput Kinerja Prasarana Sungai Progo (Groundsill)",
+      "detail": "Skor Kinerja 85.00% — Risiko Rendah (RR) / Kinerja Baik (WS Probolo, Kab. Magelang)",
+      "relatedId": "insp-2026-006"
+    },
+    {
+      "id": "log-005",
+      "timestamp": "2026-10-10T07:45:00.000Z",
+      "actorId": "usr-insp-pending-02",
+      "actorName": "Wahyu Nugroho, S.T.",
+      "actorRole": "inspector",
+      "actorBalai": "BPSDA Serayu Bogowonto",
+      "actionType": "REGISTER_ACCOUNT",
+      "summary": "Mengajukan pendaftaran akun Inspektor baru",
+      "detail": "NIP 19940928 202102 1 007 — Unit Kerja: BPSDA Serayu Bogowonto (Status: Menunggu Persetujuan Admin)"
+    },
+    {
+      "id": "log-004",
+      "timestamp": "2026-10-09T17:30:00.000Z",
+      "actorId": "usr-admin-01",
+      "actorName": "Muhammad Irfan Rosyid, ST",
+      "actorRole": "admin",
+      "actorBalai": "BPSDA Jratun Seluna",
+      "actionType": "UPDATE_FOLLOWUP",
+      "summary": "Memperbarui status tindak lanjut Sungai Bodri (Ruas Bdr-03)",
+      "detail": "Status diubah menjadi \"Selesai Ditindaklanjuti\" setelah verifikasi dokumentasi.",
+      "relatedId": "insp-2026-005"
+    },
+    {
+      "id": "log-003",
+      "timestamp": "2026-10-09T14:20:00.000Z",
+      "actorId": "usr-insp-pending-01",
+      "actorName": "Rizky Pratama, S.T.",
+      "actorRole": "inspector",
+      "actorBalai": "BPSDA Pemali Comal",
+      "actionType": "REGISTER_ACCOUNT",
+      "summary": "Mengajukan pendaftaran akun Inspektor baru",
+      "detail": "NIP 19950214 202203 1 003 — Unit Kerja: BPSDA Pemali Comal (Status: Menunggu Persetujuan Admin)"
+    },
+    {
+      "id": "log-002",
+      "timestamp": "2026-10-08T11:25:00.000Z",
+      "actorId": "usr-insp-03",
+      "actorName": "Agus Prasetyo, S.T.",
+      "actorRole": "inspector",
+      "actorBalai": "BPSDA Bengawan Solo",
+      "actionType": "CREATE_INSPECTION",
+      "summary": "Menginput Kinerja Prasarana Sungai Bengawan Solo (Perkuatan Tebing)",
+      "detail": "Skor Kinerja 66.00% — Risiko Sedang (RS) / Kinerja Cukup (Perlu Pemeliharaan Korektif).",
+      "relatedId": "insp-2026-004"
+    },
+    {
+      "id": "log-001",
+      "timestamp": "2026-10-04T10:15:00.000Z",
+      "actorId": "usr-insp-01",
+      "actorName": "Budi Santoso, S.T.",
+      "actorRole": "inspector",
+      "actorBalai": "BPSDA Pemali Comal",
+      "actionType": "CREATE_INSPECTION",
+      "summary": "Menginput Kondisi Fisik Sungai Pemali (Ruas Pml-04)",
+      "detail": "Skor NKF 49.25% — Risiko Tinggi (RT) / Kinerja Buruk (Perlu Penanganan Rehabilitatif).",
+      "relatedId": "insp-2026-001"
+    }
+  ],
+  "updatedAt": "2026-10-12T05:02:20.567Z"
+}

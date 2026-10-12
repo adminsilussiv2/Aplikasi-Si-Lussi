@@ -42,16 +42,23 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   const [regBalai, setRegBalai] = useState<BalaiPSDA>('BPSDA Jratun Seluna');
   const [regPassword, setRegPassword] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
-  const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
-
-  // Live lookup of registered or pending user from real-time `users` prop
-  const liveRegisteredUser = useMemo(
-    () =>
-      registeredUserId
-        ? users.find((u) => u.id === registeredUserId) || null
-        : null,
-    [users, registeredUserId]
+  const [registeredUser, setRegisteredUser] = useState<UserAccount | null>(
+    null
   );
+
+  // Live lookup of registered user from real-time `users` prop
+  const liveRegisteredUser = useMemo(() => {
+    if (!registeredUser) return null;
+    return (
+      users.find(
+        (u) =>
+          u.id === registeredUser.id ||
+          (u.role === 'inspector' &&
+            u.nip.replace(/\s+/g, '') ===
+              registeredUser.nip.replace(/\s+/g, ''))
+      ) || registeredUser
+    );
+  }, [users, registeredUser]);
 
   const livePendingNoticeUser = useMemo(
     () =>
@@ -70,12 +77,19 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     const lowerId = rawId.toLowerCase();
     const compactId = rawId.replace(/\s+/g, '');
 
-    const matched = users.find(
+    // Match all candidate accounts with this NIP/email/name
+    const candidates = users.filter(
       (u) =>
         u.nip.replace(/\s+/g, '') === compactId ||
         u.email.toLowerCase() === lowerId ||
         u.name.toLowerCase() === lowerId
     );
+
+    // Prefer the one whose password matches
+    const matched =
+      candidates.find(
+        (u) => u.password === password || u.password === password.trim()
+      ) || candidates[0];
 
     if (
       !matched ||
@@ -94,7 +108,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 
     if (matched.status === 'rejected') {
       setErrorMessage(
-        'Pengajuan akun Inspektor Anda ditolak oleh Administrator. Silakan daftar ulang atau hubungi pengelola Balai PSDA terkait.'
+        'Pengajuan akun Inspektor Anda ditolak oleh Administrator. Silakan daftar ulang pada tab Daftar Akun Inspektor.'
       );
       return;
     }
@@ -120,27 +134,6 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
       return;
     }
 
-    const existing = users.find(
-      (u) =>
-        u.nip.replace(/\s+/g, '') === compactNip ||
-        (Boolean(regEmail.trim()) &&
-          u.email.toLowerCase() === cleanEmail.toLowerCase())
-    );
-
-    if (existing && existing.status !== 'rejected') {
-      if (existing.status === 'pending') {
-        setRegisteredUserId(existing.id);
-        setErrorMessage(
-          `Akun dengan NIP "${cleanNip}" sudah terdaftar dan sedang berada dalam Antrean Persetujuan Administrator.`
-        );
-        return;
-      }
-      setErrorMessage(
-        `NIP atau email tersebut sudah terdaftar dan aktif di sistem Si-Lussi. Silakan langsung Masuk Akun.`
-      );
-      return;
-    }
-
     try {
       setRegSubmitting(true);
       const created = await onRegisterInspector({
@@ -152,7 +145,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
         password: cleanPassword,
       });
 
-      setRegisteredUserId(created.id);
+      setRegisteredUser(created);
       setRegName('');
       setRegNip('');
       setRegEmail('');
@@ -284,7 +277,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 {liveRegisteredUser.status === 'approved'
                   ? 'Akun Disetujui Administrator!'
-                  : 'Pendaftaran Masuk ke Antrean Real-Time'}
+                  : 'Pendaftaran Berhasil Masuk ke Antrean Real-Time'}
               </div>
               <span className="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700">
                 <Radio className="w-3 h-3 animate-pulse" />
@@ -312,25 +305,26 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                 <p className="leading-relaxed">
                   Akun atas nama <strong>{liveRegisteredUser.name}</strong> (NIP:{' '}
                   <span className="font-mono">{liveRegisteredUser.nip}</span> ·{' '}
-                  {liveRegisteredUser.balaiPsda}) sudah langsung tampil secara{' '}
-                  <strong>real-time</strong> pada{' '}
+                  {liveRegisteredUser.balaiPsda}) telah masuk secara{' '}
+                  <strong>real-time</strong> ke urutan teratas{' '}
                   <span className="font-semibold underline">
                     Antrean Persetujuan Akun Inspektor Baru
-                  </span>{' '}
-                  di halaman Administrator.
+                  </span>
+                  .
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('login');
-                    setIdentifier(liveRegisteredUser.nip);
-                    setPendingNoticeId(liveRegisteredUser.id);
-                  }}
-                  className="mt-3 inline-flex items-center gap-1.5 font-semibold text-[#0B2C5F] hover:underline cursor-pointer"
-                >
-                  Buka halaman Login ({liveRegisteredUser.nip}){' '}
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('login');
+                      setIdentifier(liveRegisteredUser.nip);
+                      setPendingNoticeId(liveRegisteredUser.id);
+                    }}
+                    className="inline-flex items-center gap-1.5 font-semibold text-[#0B2C5F] hover:underline cursor-pointer"
+                  >
+                    Ke Halaman Login <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -375,7 +369,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             </button>
           </form>
         ) : (
-          <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+          <form onSubmit={handleRegisterSubmit} className="space-y-3.5" autoComplete="off">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Nama Lengkap &amp; Gelar Inspektor{' '}

@@ -40,6 +40,13 @@ const STORAGE_KEYS = {
   LOGS: 'silussi_v2_jateng_logs_v6',
 };
 
+const LEGACY_USER_KEYS = [
+  'silussi_v2_jateng_users_v6',
+  'silussi_v2_jateng_users_v5',
+  'silussi_v2_jateng_users_v4',
+  'silussi_v2_jateng_users_v3',
+];
+
 const REALTIME_CHANNEL_NAME = 'silussi_v2_realtime_channel';
 
 type ActiveTab =
@@ -48,6 +55,12 @@ type ActiveTab =
   | 'input_prasarana'
   | 'accounts';
 
+function getAccountTimestamp(u: UserAccount): number {
+  const regTime = new Date(u.registeredAt || 0).getTime() || 0;
+  const appTime = u.approvedAt ? new Date(u.approvedAt).getTime() || 0 : 0;
+  return Math.max(regTime, appTime);
+}
+
 function mergeUsersList(
   primary: UserAccount[],
   secondary: UserAccount[]
@@ -55,19 +68,17 @@ function mergeUsersList(
   const map = new Map<string, UserAccount>();
   for (const u of [...primary, ...secondary]) {
     if (!u || !u.nip) continue;
-    const key = u.nip.replace(/\s+/g, '');
+    // Key by role + compact NIP so admin account and inspector registrations never collide
+    const key =
+      u.id === 'usr-admin-01'
+        ? 'admin:usr-admin-01'
+        : `${u.role}:${u.nip.replace(/\s+/g, '')}`;
     const existing = map.get(key);
     if (!existing) {
       map.set(key, u);
     } else {
-      // Prefer approved status or newer registration
-      if (u.status === 'approved' && existing.status !== 'approved') {
-        map.set(key, u);
-      } else if (
-        existing.status !== 'approved' &&
-        new Date(u.registeredAt).getTime() >
-          new Date(existing.registeredAt).getTime()
-      ) {
+      // Keep whichever version was modified/registered/approved more recently
+      if (getAccountTimestamp(u) > getAccountTimestamp(existing)) {
         map.set(key, u);
       }
     }
@@ -75,15 +86,41 @@ function mergeUsersList(
   return Array.from(map.values());
 }
 
-export default function App() {
-  const [users, setUsers] = useState<UserAccount[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.USERS);
-      return saved ? JSON.parse(saved) : INITIAL_USERS;
-    } catch {
-      return INITIAL_USERS;
+function loadInitialUsersFromAllKeys(): UserAccount[] {
+  let merged: UserAccount[] = [...INITIAL_USERS];
+  try {
+    for (const key of LEGACY_USER_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          merged = mergeUsersList(parsed, merged);
+        }
+      }
     }
-  });
+  } catch {
+    // Ignore storage read errors
+  }
+  // Ensure admin account has latest credentials
+  return merged.map((u) =>
+    u.id === 'usr-admin-01'
+      ? {
+          ...u,
+          name: 'Muhammad Irfan Rosyid, ST',
+          nip: '199806232022031010',
+          jabatan: 'Ahli Pertama - Teknik Pengairan',
+          password: 'Silussi-v2',
+          role: 'admin',
+          status: 'approved',
+        }
+      : u
+  );
+}
+
+export default function App() {
+  const [users, setUsers] = useState<UserAccount[]>(
+    loadInitialUsersFromAllKeys
+  );
 
   const [inspections, setInspections] = useState<RiverInspection[]>(() => {
     try {
@@ -159,17 +196,19 @@ export default function App() {
       if (!Array.isArray(incomingUsers) || incomingUsers.length === 0) return;
 
       setUsers((prev) => {
-        const prevPendingIds = new Set(
+        const prevPendingKeys = new Set(
           prev
             .filter((u) => u.role === 'inspector' && u.status === 'pending')
-            .map((u) => u.id)
+            .map((u) => `${u.nip.replace(/\s+/g, '')}:${u.registeredAt}`)
         );
         const merged = mergeUsersList(incomingUsers, prev);
         const newlyAddedPending = merged.filter(
           (u) =>
             u.role === 'inspector' &&
             u.status === 'pending' &&
-            !prevPendingIds.has(u.id)
+            !prevPendingKeys.has(
+              `${u.nip.replace(/\s+/g, '')}:${u.registeredAt}`
+            )
         );
 
         if (
@@ -194,18 +233,24 @@ export default function App() {
   // Fetch & sync users with backend server
   const syncUsersWithServer = useCallback(async () => {
     try {
-      const res = await fetch('/api/users', { cache: 'no-store' });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(`/api/users?t=${Date.now()}`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
       if (!res.ok) return;
       const data = await res.json();
       if (Array.isArray(data.users)) {
         applyIncomingRealtimeUsers(data.users, data.activityLogs);
       }
     } catch {
-      // Ignore network errors if offline
+      // Ignore network errors
     }
   }, [applyIncomingRealtimeUsers]);
 
-  // Real-time synchronization: Server-Sent Events (/api/events) + Polling + BroadcastChannel + Storage Event
+  // Real-time synchronization: Initial sync + 1.2s fast polling + BroadcastChannel + Storage Event
   useEffect(() => {
     // 1. Initial merge of client localStorage users into server store
     fetch('/api/users/sync', {
@@ -221,30 +266,12 @@ export default function App() {
       })
       .catch(() => {});
 
-    // 2. Server-Sent Events stream for instant real-time updates across devices/browsers
-    let es: EventSource | null = null;
-    try {
-      es = new EventSource('/api/events');
-      es.onmessage = (ev) => {
-        try {
-          const payload = JSON.parse(ev.data);
-          if (Array.isArray(payload.users)) {
-            applyIncomingRealtimeUsers(payload.users, payload.activityLogs);
-          }
-        } catch {
-          // Ignore malformed event
-        }
-      };
-    } catch {
-      // Fallback to polling
-    }
-
-    // 3. Fast polling every 2.5s to guarantee real-time sync even behind buffering proxies
+    // 2. Fast polling every 1.2s to guarantee real-time sync across tabs/devices/browsers
     const pollTimer = setInterval(() => {
       syncUsersWithServer();
-    }, 2500);
+    }, 1200);
 
-    // 4. BroadcastChannel for instant same-browser multi-tab sync
+    // 3. BroadcastChannel for instant 0ms same-browser multi-tab sync
     let bc: BroadcastChannel | null = null;
     try {
       bc = new BroadcastChannel(REALTIME_CHANNEL_NAME);
@@ -257,7 +284,7 @@ export default function App() {
       // Ignore if BroadcastChannel unsupported
     }
 
-    // 5. Window storage event listener for cross-tab localStorage updates
+    // 4. Window storage event listener for cross-tab localStorage updates
     const handleStorageEvent = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.USERS && e.newValue) {
         try {
@@ -273,18 +300,25 @@ export default function App() {
     window.addEventListener('storage', handleStorageEvent);
 
     return () => {
-      es?.close();
       clearInterval(pollTimer);
       bc?.close();
       window.removeEventListener('storage', handleStorageEvent);
     };
   }, [applyIncomingRealtimeUsers, syncUsersWithServer]);
 
+  // Also trigger immediate sync when navigating to Persetujuan Inspektor
+  useEffect(() => {
+    if (activeNav === 'accounts') {
+      syncUsersWithServer();
+    }
+  }, [activeNav, syncUsersWithServer]);
+
   const broadcastLocalUsers = (
     updatedUsers: UserAccount[],
     updatedLogs?: ActivityLog[]
   ) => {
     try {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers));
       const bc = new BroadcastChannel(REALTIME_CHANNEL_NAME);
       bc.postMessage({ users: updatedUsers, activityLogs: updatedLogs });
       bc.close();
@@ -318,6 +352,7 @@ export default function App() {
   const handleLoginSuccess = (user: UserAccount) => {
     setCurrentUser(user);
     setActiveNav('dashboard');
+    syncUsersWithServer();
     appendActivityLog(
       user,
       'LOGIN',
@@ -332,62 +367,72 @@ export default function App() {
   const handleRegisterInspector = async (
     newUserData: Omit<UserAccount, 'id' | 'status' | 'registeredAt' | 'role'>
   ): Promise<UserAccount> => {
-    // 1. Try server-authoritative real-time registration first
+    const nowIso = new Date().toISOString();
+    const optimisticAccount: UserAccount = {
+      ...newUserData,
+      id: `usr-insp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      role: 'inspector',
+      status: 'pending',
+      registeredAt: nowIso,
+    };
+
+    // 1. Immediately apply optimistically to local state + localStorage + BroadcastChannel
+    const optimisticUsers = mergeUsersList(
+      [optimisticAccount],
+      usersRef.current
+    );
+    setUsers(optimisticUsers);
+    broadcastLocalUsers(optimisticUsers);
+
+    // 2. Sync to authoritative server store
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
       const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUserData),
+        body: JSON.stringify({ ...newUserData, id: optimisticAccount.id }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(
-          data.error || 'Gagal mendaftarkan akun Inspektor baru.'
-        );
+      if (response.ok) {
+        const data = await response.json();
+        const serverUser: UserAccount = data.user || optimisticAccount;
+        const mergedUsers = Array.isArray(data.users)
+          ? mergeUsersList(data.users, [serverUser])
+          : optimisticUsers;
+
+        setUsers(mergedUsers);
+        if (Array.isArray(data.activityLogs)) {
+          setActivityLogs(data.activityLogs);
+        }
+        broadcastLocalUsers(mergedUsers, data.activityLogs);
+
+        if (currentUser?.role === 'admin') {
+          showToast(
+            `Akun Inspektor ${serverUser.name} berhasil ditambahkan ke Antrean Persetujuan.`
+          );
+        }
+        return serverUser;
       }
-
-      const createdUser: UserAccount = data.user;
-      const updatedUsers: UserAccount[] = Array.isArray(data.users)
-        ? data.users
-        : [createdUser, ...usersRef.current];
-
-      setUsers(updatedUsers);
-      if (Array.isArray(data.activityLogs)) {
-        setActivityLogs(data.activityLogs);
-      }
-      broadcastLocalUsers(updatedUsers, data.activityLogs);
-
-      if (currentUser?.role === 'admin') {
-        showToast(
-          `Akun Inspektor ${createdUser.name} berhasil didaftarkan ke Antrean Persetujuan.`
-        );
-      }
-      return createdUser;
-    } catch (err) {
-      if (err instanceof Error && err.message.includes('sudah terdaftar')) {
-        throw err;
-      }
-      // Fallback local registration if server unreachable
-      const fallbackAccount: UserAccount = {
-        ...newUserData,
-        id: `usr-insp-${Date.now()}`,
-        role: 'inspector',
-        status: 'pending',
-        registeredAt: new Date().toISOString(),
-      };
-
-      const nextUsers = [fallbackAccount, ...usersRef.current];
-      setUsers(nextUsers);
-      appendActivityLog(
-        fallbackAccount,
-        'REGISTER_ACCOUNT',
-        'Mengajukan pendaftaran akun Inspektor baru',
-        `NIP ${fallbackAccount.nip} — Unit Kerja: ${fallbackAccount.balaiPsda} (Status: Menunggu Persetujuan Administrator)`
-      );
-      broadcastLocalUsers(nextUsers);
-      return fallbackAccount;
+    } catch {
+      // Optimistic registration already saved locally and broadcasted
     }
+
+    appendActivityLog(
+      optimisticAccount,
+      'REGISTER_ACCOUNT',
+      'Mengajukan pendaftaran akun Inspektor baru',
+      `NIP ${optimisticAccount.nip} — Unit Kerja: ${optimisticAccount.balaiPsda} (Status: Menunggu Persetujuan Administrator)`
+    );
+
+    if (currentUser?.role === 'admin') {
+      showToast(
+        `Akun Inspektor ${optimisticAccount.name} berhasil ditambahkan ke Antrean Persetujuan.`
+      );
+    }
+    return optimisticAccount;
   };
 
   const handleApproveUser = async (userId: string) => {
@@ -395,12 +440,13 @@ export default function App() {
     const target = users.find((u) => u.id === userId);
     if (!target) return;
 
+    const nowIso = new Date().toISOString();
     const updatedUsers = users.map((u) =>
       u.id === userId
         ? {
             ...u,
             status: 'approved' as const,
-            approvedAt: new Date().toISOString(),
+            approvedAt: nowIso,
             approvedBy: currentUser.name,
           }
         : u

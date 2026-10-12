@@ -50,7 +50,14 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
   const [submitting, setSubmitting] = useState(false);
 
   const pendingUsers = useMemo(
-    () => users.filter((u) => u.role === 'inspector' && u.status === 'pending'),
+    () =>
+      users
+        .filter((u) => u.role === 'inspector' && u.status === 'pending')
+        .sort(
+          (a, b) =>
+            new Date(b.registeredAt).getTime() -
+            new Date(a.registeredAt).getTime()
+        ),
     [users]
   );
 

@@ -196,6 +196,9 @@ function createSeedInspection(
     RiverInspection,
     | 'subValues'
     | 'componentDocs'
+    | 'linkDokumentasi1'
+    | 'linkDokumentasi2'
+    | 'linkDokumentasi3'
     | 'nkfTotal'
     | 'muaraScore'
     | 'riskLevel'
