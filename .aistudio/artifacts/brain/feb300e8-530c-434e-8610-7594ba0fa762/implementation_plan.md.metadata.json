@@ -1,0 +1,6 @@
+{
+  "summary":  "Revisi rencana implementasi Si-Lussi v2 dengan menambahkan fitur Angka Tarik (Slider Penyesuaian Nilai Fisik) pada setiap sub-komponen sungai di samping pilihan fungsi IF (50, 70, 80, 90), sehingga Inspektor dapat menyesuaikan angka persis sesuai kondisi aktual di lapangan.",
+  "updatedAt":  "2026-10-10T16:45:18.474467124Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Si-Lussi v2 - DPUPR Provinsi Jawa Tengah",
+  "description": "Sistem Informasi Penilaian Kondisi Fisik dan Kinerja Sungai Dinas Pekerjaan Umum dan Penataan Ruang Provinsi Jawa Tengah dengan dashboard analitik real-time, angka tarik penilaian lapangan, dokumentasi per komponen, dan laporan otomatis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
