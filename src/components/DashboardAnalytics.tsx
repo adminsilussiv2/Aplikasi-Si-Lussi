@@ -445,17 +445,14 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <h2 className="font-display text-sm font-bold text-[#0B2C5F] pb-3 border-b border-slate-100">
-              Rata-Rata Nilai Fisik 7 Komponen Sungai
+              Rata-Rata Nilai Fisik Komponen Sungai
             </h2>
             <div className="mt-4 space-y-3">
               {stats.compAverages.map((c) => (
                 <div key={c.key} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-slate-800">
-                      {c.title}{' '}
-                      <span className="text-[11px] font-mono text-slate-400">
-                        {c.bobotInduk > 0 ? `(Bobot ${c.bobotInduk}%)` : '(Muara)'}
-                      </span>
+                      {c.title}
                     </span>
                     <span className="font-mono font-bold text-[#0B2C5F] tabular-nums">
                       {c.avgScore.toFixed(1)}%

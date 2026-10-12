@@ -35,9 +35,9 @@ import { InspectionDetailModal } from './components/InspectionDetailModal';
 import { AdminManagementView } from './components/AdminManagementView';
 
 const STORAGE_KEYS = {
-  USERS: 'silussi_v2_jateng_users_v4',
-  INSPECTIONS: 'silussi_v2_jateng_inspections_v4',
-  LOGS: 'silussi_v2_jateng_logs_v4',
+  USERS: 'silussi_v2_jateng_users_v5',
+  INSPECTIONS: 'silussi_v2_jateng_inspections_v6',
+  LOGS: 'silussi_v2_jateng_logs_v5',
 };
 
 type ActiveTab =
@@ -619,12 +619,9 @@ export default function App() {
         </main>
 
         {/* Quiet Institutional Footer */}
-        <footer className="no-print border-t border-slate-200 bg-white px-6 py-4 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <footer className="no-print border-t border-slate-200 bg-white px-6 py-4 text-xs text-slate-500 flex items-center justify-between gap-2">
           <div>
             <strong>Si-Lussi v2.0</strong> — Dinas Pekerjaan Umum dan Penataan Ruang Provinsi Jawa Tengah
-          </div>
-          <div>
-            Cakupan: WS Pemali Comal · WS Bodri Kuto · WS Seluna · WS Bengawan Solo · WS Probolo · WS Serayu Citanduy
           </div>
         </footer>
       </div>

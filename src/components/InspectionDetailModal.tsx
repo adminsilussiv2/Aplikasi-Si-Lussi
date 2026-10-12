@@ -304,16 +304,10 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
                         ? 'PARAMETER KINERJA PRASARANA'
                         : 'KOMPONEN SUNGAI'}
                     </th>
-                    <th className="py-2.5 px-3 text-right font-mono font-semibold w-28">
-                      Nilai Bobot (%)
-                    </th>
-                    <th className="py-2.5 px-3 text-right font-mono font-semibold w-28">
+                    <th className="py-2.5 px-3 text-right font-mono font-semibold w-32">
                       {category === 'kinerja_prasarana'
                         ? 'Nilai Kinerja (%)'
                         : 'Nilai Fisik (%)'}
-                    </th>
-                    <th className="py-2.5 px-3 text-right font-mono font-semibold w-36">
-                      Nilai Kondisi / Kinerja (%)
                     </th>
                     <th className="py-2.5 px-3 text-left font-semibold">
                       Keterangan &amp; Dokumentasi
@@ -336,14 +330,8 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
                               ? `${comp.title} — ${inspection.namaPrasarana || ''}`
                               : comp.title}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono tabular-nums text-slate-700">
-                            {comp.bobotInduk}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-mono tabular-nums text-slate-800">
-                            {res.nilaiFisikKomponen.toFixed(2)}
-                          </td>
                           <td className="py-2.5 px-3 text-right font-mono font-bold tabular-nums text-[#0B2C5F]">
-                            {res.nilaiKondisiFisikTertimbang.toFixed(2)}
+                            {res.nilaiFisikKomponen.toFixed(2)}%
                           </td>
                           <td className="py-2.5 px-3 text-slate-600">
                             {doc?.keterangan || '-'}
@@ -364,10 +352,6 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
                         ? 'TOTAL NILAI KINERJA PRASARANA'
                         : 'TOTAL NILAI KONDISI FISIK (NKF)'}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono tabular-nums">
-                      100
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono">-</td>
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums text-[#0B2C5F]">
                       {calc.nkfTotal.toFixed(2)}%
                     </td>
@@ -416,13 +400,10 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
                 >
                   <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
                     <div className="font-display text-xs font-bold text-[#0B2C5F] uppercase">
-                      {comp.no}. {comp.title}{' '}
-                      {comp.isMainWeighted
-                        ? `(Bobot: ${comp.bobotInduk}%)`
-                        : '(Komponen Ruas Muara)'}
+                      {comp.no}. {comp.title}
                     </div>
                     <div className="font-mono text-xs font-bold text-slate-800">
-                      Jumlah Nilai: {res.nilaiFisikKomponen.toFixed(2)}%
+                      Nilai Komponen: {res.nilaiFisikKomponen.toFixed(2)}%
                     </div>
                   </div>
 
@@ -434,16 +415,10 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
                           Sub-Komponen Penilaian
                         </th>
                         <th className="py-2 px-3 text-right font-mono w-24">
-                          Bobot (%)
-                        </th>
-                        <th className="py-2 px-3 text-right font-mono w-24">
                           Nilai (%)
                         </th>
                         <th className="py-2 px-3 text-left">
-                          Kondisi Lapangan (IF / Angka Tarik)
-                        </th>
-                        <th className="py-2 px-3 text-right font-mono w-32">
-                          Skor Tertimbang (%)
+                          Kondisi Lapangan
                         </th>
                       </tr>
                     </thead>
@@ -471,35 +446,15 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
                               </div>
                             )}
                           </td>
-                          <td className="py-2 px-3 text-right font-mono tabular-nums text-slate-600">
-                            {sub.bobot}
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono font-bold tabular-nums text-slate-900">
-                            {sub.nilaiFisik}
+                          <td className="py-2 px-3 text-right font-mono font-bold tabular-nums text-[#0B2C5F]">
+                            {sub.nilaiFisik}%
                           </td>
                           <td className="py-2 px-3 text-slate-600">
                             {sub.conditionLabel}
                           </td>
-                          <td className="py-2 px-3 text-right font-mono font-semibold tabular-nums text-[#0B2C5F]">
-                            {sub.nilaiKondisiFisik.toFixed(2)}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot>
-                      <tr className="bg-slate-50/80 font-bold text-slate-900 border-t border-slate-200">
-                        <td></td>
-                        <td className="py-2 px-3">JUMLAH NILAI</td>
-                        <td className="py-2 px-3 text-right font-mono tabular-nums">
-                          100
-                        </td>
-                        <td></td>
-                        <td></td>
-                        <td className="py-2 px-3 text-right font-mono tabular-nums text-[#0B2C5F]">
-                          {res.nilaiFisikKomponen.toFixed(2)}
-                        </td>
-                      </tr>
-                    </tfoot>
                   </table>
 
                   {displayPhotos.length > 0 && (

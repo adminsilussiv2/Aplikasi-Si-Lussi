@@ -28,7 +28,7 @@ export const INITIAL_USERS: UserAccount[] = [
     id: 'usr-admin-01',
     name: 'Muhammad Irfan Rosyid, ST',
     email: 'admin@pupr.jatengprov.go.id',
-    password: 'password123',
+    password: 'Silussi-v2',
     nip: '199806232022031010',
     jabatan: 'Ahli Pertama - Teknik Pengairan',
     balaiPsda: 'BPSDA Jratun Seluna',

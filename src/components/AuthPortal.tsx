@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ShieldCheck,
   UserPlus,
   LogIn,
   CheckCircle2,
@@ -29,7 +28,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   onRegisterInspector,
 }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingNotice, setPendingNotice] = useState<UserAccount | null>(null);
@@ -50,12 +49,23 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     setErrorMessage(null);
     setPendingNotice(null);
 
-    const trimmedEmail = email.trim().toLowerCase();
-    const matched = users.find((u) => u.email.toLowerCase() === trimmedEmail);
+    const rawId = identifier.trim();
+    const lowerId = rawId.toLowerCase();
+    const compactId = rawId.replace(/\s+/g, '');
 
-    if (!matched || matched.password !== password) {
+    const matched = users.find(
+      (u) =>
+        u.nip.replace(/\s+/g, '') === compactId ||
+        u.email.toLowerCase() === lowerId ||
+        u.name.toLowerCase() === lowerId
+    );
+
+    if (
+      !matched ||
+      (matched.password !== password && matched.password !== password.trim())
+    ) {
       setErrorMessage(
-        'Email atau kata sandi tidak sesuai. Silakan periksa kembali atau gunakan tombol akses cepat di bawah.'
+        'NIP / Email atau kata sandi tidak sesuai. Silakan periksa kembali.'
       );
       return;
     }
@@ -92,10 +102,14 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     }
 
     const exists = users.some(
-      (u) => u.email.toLowerCase() === regEmail.trim().toLowerCase()
+      (u) =>
+        u.email.toLowerCase() === regEmail.trim().toLowerCase() ||
+        u.nip.replace(/\s+/g, '') === regNip.trim().replace(/\s+/g, '')
     );
     if (exists) {
-      setErrorMessage('Alamat email tersebut sudah terdaftar di sistem Si-Lussi.');
+      setErrorMessage(
+        'NIP atau alamat email tersebut sudah terdaftar di sistem Si-Lussi.'
+      );
       return;
     }
 
@@ -114,22 +128,6 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     setRegEmail('');
     setRegPassword('');
   };
-
-  const handleQuickDemoLogin = (targetUser: UserAccount) => {
-    setErrorMessage(null);
-    setPendingNotice(null);
-    onLoginSuccess(targetUser);
-  };
-
-  const adminDemo = users.find(
-    (u) => u.role === 'admin' && u.status === 'approved'
-  );
-  const approvedInspectors = users.filter(
-    (u) => u.role === 'inspector' && u.status === 'approved'
-  );
-  const pendingCount = users.filter(
-    (u) => u.role === 'inspector' && u.status === 'pending'
-  ).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#071D42] via-[#0B2C5F] to-[#15528E] flex items-center justify-center p-4 sm:p-8">
@@ -224,7 +222,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
               type="button"
               onClick={() => {
                 setMode('login');
-                setEmail(regSuccessUser.email);
+                setIdentifier(regSuccessUser.nip);
               }}
               className="mt-3 inline-flex items-center gap-1.5 font-semibold text-[#0B2C5F] hover:underline cursor-pointer"
             >
@@ -237,14 +235,14 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Email Akun Kedinasan / Terdaftar
+                NIP / Email / Nama Akun Terdaftar
               </label>
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@pupr.jatengprov.go.id"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="Masukkan NIP atau Email Kedinasan"
                 className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#1B65A6] focus:ring-2 focus:ring-[#1B65A6]/20 outline-none transition-all"
               />
             </div>
@@ -372,60 +370,6 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             </button>
           </form>
         )}
-
-        {/* Quick Role Access Panel */}
-        <div className="mt-7 pt-5 border-t border-slate-200">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-700">
-              Akses Cepat Masuk Akun
-            </span>
-            <span className="text-[11px] text-slate-500 font-mono">
-              {pendingCount} antrean akun
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {adminDemo && (
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin(adminDemo)}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:border-[#0B2C5F] bg-slate-50 hover:bg-sky-50/60 transition-all flex items-center justify-between text-left group cursor-pointer"
-              >
-                <div>
-                  <div className="text-xs font-bold text-[#0B2C5F] flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-[#1B65A6]" />
-                    Administrator — {adminDemo.name}
-                  </div>
-                  <div className="text-[11px] font-medium text-slate-700 mt-0.5">
-                    {adminDemo.jabatan}
-                  </div>
-                  <div className="text-[11px] font-mono text-slate-500 mt-0.5">
-                    NIP: {adminDemo.nip}
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#0B2C5F] shrink-0" />
-              </button>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {approvedInspectors.slice(0, 2).map((insp) => (
-                <button
-                  key={insp.id}
-                  type="button"
-                  onClick={() => handleQuickDemoLogin(insp)}
-                  className="p-2.5 rounded-xl border border-slate-200 hover:border-[#1B65A6] bg-white hover:bg-sky-50/40 transition-all text-left group cursor-pointer"
-                >
-                  <div className="text-xs font-semibold text-slate-900 group-hover:text-[#0B2C5F] truncate">
-                    Inspektor: {insp.name}
-                  </div>
-                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                    {insp.balaiPsda}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

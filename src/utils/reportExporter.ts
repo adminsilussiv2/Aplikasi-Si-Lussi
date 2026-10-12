@@ -119,13 +119,12 @@ export function exportInspectionToCsv(inspection: RiverInspection) {
     'Keterangan & Dokumentasi',
   ]);
 
-  let mainRowNo = 1;
   for (const comp of targetComponents) {
-    if (!comp.isMainWeighted && !inspection.includeMuaraInSummary) continue;
+    if (!comp.isMainWeighted) continue;
     const res = calc.componentResults[comp.key];
     const doc = inspection.componentDocs[comp.key];
     rows.push([
-      comp.key === 'buanganLimbah' ? 7 : mainRowNo++,
+      comp.no,
       comp.title,
       comp.bobotInduk,
       res.nilaiFisikKomponen.toFixed(2),

@@ -675,78 +675,8 @@ export const BLANGKO_COMPONENTS: ComponentMetadata[] = [
     ],
   },
   {
-    key: 'muara',
-    no: 6,
-    title: 'Muara Sungai',
-    shortTitle: 'Muara Sungai',
-    bobotInduk: 0,
-    isMainWeighted: false,
-    subComponents: [
-      {
-        id: 'muara_1',
-        no: 1,
-        name: 'Pemanfaatan Muara',
-        bobot: 50,
-        placeholderTag: '<<Pemanfaatan Muara>>',
-        ifOptions: [
-          {
-            score: 90,
-            label: 'Alami / mangrove terjaga / alur muara bebas',
-            shortTag: 'Alami Terjaga (90)',
-          },
-          {
-            score: 80,
-            label: 'Tambatan perahu nelayan tertata tidak menghambat',
-            shortTag: 'Tambatan Tertata (80)',
-          },
-          {
-            score: 70,
-            label: 'Tambak / bangunan mulai menyempitkan mulut muara',
-            shortTag: 'Mulai Menyempit (70)',
-          },
-          {
-            score: 50,
-            label:
-              'Alih fungsi padat menghalangi pelepasan debit ke laut',
-            shortTag: 'Terganggu Berat (50)',
-          },
-        ],
-      },
-      {
-        id: 'muara_2',
-        no: 2,
-        name: 'Sedimentasi Muara ( musim kemarau )',
-        bobot: 50,
-        placeholderTag: '<<Sedimentasi Muara>>',
-        ifOptions: [
-          {
-            score: 90,
-            label: 'Mulut muara terbuka lancar sepanjang musim kemarau',
-            shortTag: 'Terbuka Lancar (90)',
-          },
-          {
-            score: 80,
-            label: 'Endapan pasir/lumpur ringan (<25% lebar muara)',
-            shortTag: 'Endapan Ringan (80)',
-          },
-          {
-            score: 70,
-            label: 'Pendangkalan lidah pasir sedang (25%-50% lebar muara)',
-            shortTag: 'Pendangkalan Sedang (70)',
-          },
-          {
-            score: 50,
-            label:
-              'Mulut muara tertutup sedimen / membutuhkan pengerukan (>50%)',
-            shortTag: 'Tertutup Sedimen (50)',
-          },
-        ],
-      },
-    ],
-  },
-  {
     key: 'buanganLimbah',
-    no: 7,
+    no: 6,
     title: 'Buangan Limbah',
     shortTitle: 'Buangan Limbah',
     bobotInduk: 10,

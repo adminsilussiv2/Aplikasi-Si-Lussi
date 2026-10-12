@@ -185,6 +185,7 @@ export const InspectionInputWorkspace: React.FC<
 
         setSubValues((prev) => {
           const existing = prev[subId];
+          const customNote = existing?.keterangan?.trim();
           return {
             ...prev,
             [subId]: {
@@ -194,7 +195,9 @@ export const InspectionInputWorkspace: React.FC<
                 {
                   id: `ph-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                   url: dataUrl,
-                  caption: `Dokumentasi ${subName} (${file.name})`,
+                  caption: customNote
+                    ? customNote
+                    : `Dokumentasi ${subName} (${file.name})`,
                   uploadedAt: new Date().toISOString(),
                 },
               ],
@@ -209,39 +212,23 @@ export const InspectionInputWorkspace: React.FC<
     e.target.value = '';
   };
 
-  const handleAddSampleSubPhoto = (
+  const handleSubPhotoCaptionChange = (
     subId: string,
-    subName: string,
-    compKey: string
+    photoId: string,
+    newCaption: string
   ) => {
-    const sampleUrl =
-      compKey === 'palung' || compKey === 'kinerjaPrasarana'
-        ? FIELD_SAMPLE_PHOTOS.palung
-        : compKey === 'bantaranKanan' || compKey === 'bantaranKiri'
-        ? FIELD_SAMPLE_PHOTOS.bantaran
-        : compKey === 'sempadanKanan' || compKey === 'sempadanKiri'
-        ? FIELD_SAMPLE_PHOTOS.sempadan
-        : FIELD_SAMPLE_PHOTOS.muaraLimbah;
-
     setSubValues((prev) => {
       const existing = prev[subId];
       return {
         ...prev,
         [subId]: {
           ...existing,
-          photos: [
-            ...(existing?.photos || []),
-            {
-              id: `ph-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-              url: sampleUrl,
-              caption: `Dokumentasi Lapangan: ${subName}`,
-              uploadedAt: new Date().toISOString(),
-            },
-          ],
+          photos: (existing?.photos || []).map((p) =>
+            p.id === photoId ? { ...p, caption: newCaption } : p
+          ),
         },
       };
     });
-    setOpenDocSubIds((prev) => ({ ...prev, [subId]: true }));
   };
 
   const handleRemoveSubPhoto = (subId: string, photoId: string) => {
@@ -692,46 +679,26 @@ export const InspectionInputWorkspace: React.FC<
                   {/* Component Spreadsheet Header */}
                   <div className="bg-[#0B2C5F] text-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-sky-300">
-                        {category === 'kinerja_prasarana'
-                          ? `Penilaian Kinerja Prasarana · ${namaPrasarana}`
-                          : comp.isMainWeighted
-                          ? `Komponen Utama Blangko · Bobot Induk ${comp.bobotInduk}%`
-                          : 'Komponen Evaluasi Ruas Muara Sungai (Sub-Bobot 100%)'}
-                      </div>
                       <h3 className="font-display text-base font-bold">
                         {category === 'kinerja_prasarana'
-                          ? 'B. Input Nilai Kinerja Prasarana'
+                          ? `B. Input Nilai Kinerja Prasarana (${namaPrasarana})`
                           : `${comp.no}. ${comp.title}`}
                       </h3>
                     </div>
 
-                    <div className="flex items-center gap-4 font-mono text-xs bg-white/10 px-3.5 py-1.5 rounded-lg">
-                      <div>
-                        <span className="text-sky-200">
-                          {category === 'kinerja_prasarana'
-                            ? 'Nilai Kinerja: '
-                            : 'Jumlah Nilai Fisik: '}
-                        </span>
-                        <span className="font-bold text-white tabular-nums">
-                          {compCalc.nilaiFisikKomponen.toFixed(2)}%
-                        </span>
-                      </div>
-                      {comp.isMainWeighted && category === 'fisik_sungai' && (
-                        <>
-                          <span className="text-white/25">|</span>
-                          <div>
-                            <span className="text-sky-200">NKF Tertimbang: </span>
-                            <span className="font-bold text-sky-300 tabular-nums">
-                              {compCalc.nilaiKondisiFisikTertimbang.toFixed(2)}%
-                            </span>
-                          </div>
-                        </>
-                      )}
+                    <div className="flex items-center gap-2 font-mono text-xs bg-white/10 px-3.5 py-1.5 rounded-lg">
+                      <span className="text-sky-200">
+                        {category === 'kinerja_prasarana'
+                          ? 'Nilai Kinerja: '
+                          : 'Nilai Komponen: '}
+                      </span>
+                      <span className="font-bold text-white tabular-nums">
+                        {compCalc.nilaiFisikKomponen.toFixed(2)}%
+                      </span>
                     </div>
                   </div>
 
-                  {/* Sub-Components Rows with Optional Klik Dokumentasi Button */}
+                  {/* Sub-Components Rows */}
                   <div className="p-5 space-y-4">
                     {comp.subComponents.map((sub) => {
                       const currentVal = subValues[sub.id] || {
@@ -742,10 +709,6 @@ export const InspectionInputWorkspace: React.FC<
                         docLink: '',
                         photos: [],
                       };
-                      const weightedSubScore = (
-                        (sub.bobot * currentVal.nilaiFisik) /
-                        100
-                      ).toFixed(2);
 
                       const scoreColor =
                         currentVal.nilaiFisik > 70
@@ -755,156 +718,67 @@ export const InspectionInputWorkspace: React.FC<
                           : 'text-red-700';
 
                       const subPhotos = currentVal.photos || [];
-                      const hasDocData =
-                        subPhotos.length > 0 ||
-                        Boolean(currentVal.keterangan?.trim()) ||
-                        Boolean(currentVal.docLink?.trim());
-                      const isDocOpen = Boolean(openDocSubIds[sub.id]);
 
                       return (
                         <div
                           key={sub.id}
                           className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3"
                         >
-                          {/* Top Row: Sub-Component Title + Score + Klik Dokumentasi Button (Tidak Wajib) */}
+                          {/* Top Row: Sub-Component Title + Score */}
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div>
-                              <span className="text-xs font-mono font-semibold text-[#1B65A6]">
-                                {category === 'kinerja_prasarana'
-                                  ? `Bangunan: ${namaPrasarana} · Bobot 100%`
-                                  : `No. ${sub.no} · Nilai Bobot: ${sub.bobot}%`}
-                              </span>
                               <h4 className="text-sm font-bold text-slate-900">
-                                {sub.name}
+                                {category === 'kinerja_prasarana'
+                                  ? sub.name
+                                  : `${sub.no}. ${sub.name}`}
                               </h4>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                              <div className="flex items-center gap-2.5 font-mono text-xs bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                                <div>
-                                  <span className="text-slate-500">
-                                    {category === 'kinerja_prasarana'
-                                      ? 'Nilai Kinerja: '
-                                      : 'Nilai Fisik: '}
-                                  </span>
-                                  <span
-                                    className={`font-bold text-sm tabular-nums ${scoreColor}`}
-                                  >
-                                    {currentVal.nilaiFisik}%
-                                  </span>
-                                </div>
-                                {category === 'fisik_sungai' && (
-                                  <>
-                                    <span className="text-slate-300">|</span>
-                                    <div>
-                                      <span className="text-slate-500">
-                                        NKF:{' '}
-                                      </span>
-                                      <span className="font-bold text-sm text-[#0B2C5F] tabular-nums">
-                                        {weightedSubScore}%
-                                      </span>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-
-                                {/* Direct Upload Foto Button (No need to click Dokumentasi Opsional first) */}
-                                <label className="px-3 py-1.5 rounded-lg bg-[#0B2C5F] hover:bg-[#1B65A6] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap">
-                                  <Camera className="w-3.5 h-3.5" />
-                                  <span>
-                                    Upload Foto
-                                    {subPhotos.length > 0
-                                      ? ` (${subPhotos.length})`
-                                      : ''}
-                                  </span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={(e) =>
-                                      handleSubFileUpload(
-                                        sub.id,
-                                        sub.name,
-                                        e
-                                      )
-                                    }
-                                    className="hidden"
-                                  />
-                                </label>
+                              <div className="flex items-center gap-2 font-mono text-xs bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                                <span className="text-slate-500">
+                                  {category === 'kinerja_prasarana'
+                                    ? 'Nilai Kinerja: '
+                                    : 'Nilai Fisik: '}
+                                </span>
+                                <span
+                                  className={`font-bold text-sm tabular-nums ${scoreColor}`}
+                                >
+                                  {currentVal.nilaiFisik}%
+                                </span>
                               </div>
                             </div>
+                          </div>
 
-                          {/* IF Function Dropdown + 50/70/80/90 Quick Buttons */}
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                            <div className="md:col-span-8">
-                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                                Pilihan Kondisi Sesuai Fungsi IF Spreadsheet (50, 70, 80, 90)
-                              </label>
-                              <select
-                                value={
-                                  sub.ifOptions.find(
-                                    (o) => o.label === currentVal.conditionLabel
-                                  )?.score ?? ''
+                          {/* Criteria Dropdown */}
+                          <div>
+                            <select
+                              value={
+                                sub.ifOptions.find(
+                                  (o) => o.label === currentVal.conditionLabel
+                                )?.score ?? ''
+                              }
+                              onChange={(e) => {
+                                const sc = Number(e.target.value);
+                                const found = sub.ifOptions.find(
+                                  (o) => o.score === sc
+                                );
+                                if (found) {
+                                  handleIfOptionChange(
+                                    sub.id,
+                                    found.score,
+                                    found.label
+                                  );
                                 }
-                                onChange={(e) => {
-                                  const sc = Number(e.target.value);
-                                  const found = sub.ifOptions.find(
-                                    (o) => o.score === sc
-                                  );
-                                  if (found) {
-                                    handleIfOptionChange(
-                                      sub.id,
-                                      found.score,
-                                      found.label
-                                    );
-                                  }
-                                }}
-                                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white focus:border-[#1B65A6] outline-none"
-                              >
-                                {sub.ifOptions.map((opt) => (
-                                  <option key={opt.score} value={opt.score}>
-                                    [IF = {opt.score}] {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="md:col-span-4">
-                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                                Angka Fungsi IF Cepat
-                              </label>
-                              <div className="grid grid-cols-4 gap-1 bg-slate-200/70 p-1 rounded-lg">
-                                {[50, 70, 80, 90].map((preset) => {
-                                  const isPresetActive =
-                                    currentVal.nilaiFisik === preset;
-                                  return (
-                                    <button
-                                      key={preset}
-                                      type="button"
-                                      onClick={() => {
-                                        const opt = sub.ifOptions.find(
-                                          (o) => o.score === preset
-                                        );
-                                        if (opt) {
-                                          handleIfOptionChange(
-                                            sub.id,
-                                            opt.score,
-                                            opt.label
-                                          );
-                                        }
-                                      }}
-                                      className={`py-1.5 text-xs font-mono font-bold rounded-md transition-colors cursor-pointer ${
-                                        isPresetActive
-                                          ? 'bg-[#0B2C5F] text-white shadow-xs'
-                                          : 'text-slate-700 hover:bg-white'
-                                      }`}
-                                    >
-                                      {preset}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                              }}
+                              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white focus:border-[#1B65A6] outline-none"
+                            >
+                              {sub.ifOptions.map((opt) => (
+                                <option key={opt.score} value={opt.score}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
                           </div>
 
                           {/* Angka Tarik (Slider) */}
@@ -961,43 +835,99 @@ export const InspectionInputWorkspace: React.FC<
                             </div>
                           </div>
 
-                          {/* Directly Display Uploaded Photos if Any */}
-                          {subPhotos.length > 0 && (
-                            <div className="pt-2 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                              {subPhotos.map((ph) => (
-                                <div
-                                  key={ph.id}
-                                  className="flex items-center gap-2.5 p-2 rounded-lg bg-white border border-slate-200"
-                                >
-                                  <img
-                                    src={ph.url}
-                                    alt={ph.caption}
-                                    referrerPolicy="no-referrer"
-                                    className="w-16 h-12 object-cover rounded-md shrink-0 border border-slate-200"
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] font-semibold text-slate-800 truncate">
-                                      {ph.caption}
-                                    </p>
-                                    <p className="text-[10px] font-mono text-emerald-700 flex items-center gap-1">
-                                      <CheckCircle2 className="w-3 h-3" />
-                                      Foto Terlampir
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleRemoveSubPhoto(sub.id, ph.id)
-                                    }
-                                    className="p-1 text-slate-400 hover:text-red-600 cursor-pointer"
-                                    title="Hapus Foto"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ))}
+                          {/* Upload Dokumentasi Di Atas Keterangan Dokumentasi */}
+                          <div className="pt-2.5 border-t border-slate-200/80 space-y-2.5">
+                            <div>
+                              <label className="px-3 py-1.5 rounded-lg bg-[#0B2C5F] hover:bg-[#1B65A6] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap">
+                                <Camera className="w-3.5 h-3.5" />
+                                <span>
+                                  Upload Foto
+                                  {subPhotos.length > 0
+                                    ? ` (${subPhotos.length})`
+                                    : ''}
+                                </span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  onChange={(e) =>
+                                    handleSubFileUpload(
+                                      sub.id,
+                                      sub.name,
+                                      e
+                                    )
+                                  }
+                                  className="hidden"
+                                />
+                              </label>
                             </div>
-                          )}
+
+                            {subPhotos.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                {subPhotos.map((ph) => (
+                                  <div
+                                    key={ph.id}
+                                    className="flex items-center gap-2.5 p-2 rounded-lg bg-white border border-slate-200"
+                                  >
+                                    <img
+                                      src={ph.url}
+                                      alt={ph.caption}
+                                      referrerPolicy="no-referrer"
+                                      className="w-16 h-12 object-cover rounded-md shrink-0 border border-slate-200"
+                                    />
+                                    <div className="min-w-0 flex-1 space-y-1">
+                                      <input
+                                        type="text"
+                                        value={ph.caption}
+                                        onChange={(e) =>
+                                          handleSubPhotoCaptionChange(
+                                            sub.id,
+                                            ph.id,
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder="Keterangan foto..."
+                                        className="w-full px-2 py-1 text-[11px] font-medium text-slate-800 rounded border border-slate-200 focus:border-[#1B65A6] outline-none"
+                                      />
+                                      <p className="text-[10px] font-mono text-emerald-700 flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        Foto Terlampir
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleRemoveSubPhoto(sub.id, ph.id)
+                                      }
+                                      className="p-1 text-slate-400 hover:text-red-600 cursor-pointer"
+                                      title="Hapus Foto"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                                Keterangan Dokumentasi
+                              </label>
+                              <input
+                                type="text"
+                                value={currentVal.keterangan || ''}
+                                onChange={(e) =>
+                                  handleSubDocFieldChange(
+                                    sub.id,
+                                    'keterangan',
+                                    e.target.value
+                                  )
+                                }
+                                placeholder={`Masukkan keterangan dokumentasi untuk ${sub.name}...`}
+                                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white focus:border-[#1B65A6] outline-none"
+                              />
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -1076,7 +1006,7 @@ export const InspectionInputWorkspace: React.FC<
               <div className="text-xs font-bold text-slate-700 mb-2">
                 {category === 'kinerja_prasarana'
                   ? 'Rekapitulasi Nilai Kinerja Prasarana'
-                  : 'Tabel Komponen Utama (Bobot 100%)'}
+                  : 'Rekapitulasi Komponen Penilaian'}
               </div>
               <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
                 <table className="w-full text-xs">
@@ -1087,14 +1017,8 @@ export const InspectionInputWorkspace: React.FC<
                           ? 'Parameter'
                           : 'Komponen'}
                       </th>
-                      <th className="py-2 px-2 text-right font-mono font-semibold">
-                        Bobot
-                      </th>
-                      <th className="py-2 px-2 text-right font-mono font-semibold">
-                        Nilai
-                      </th>
                       <th className="py-2 px-2.5 text-right font-mono font-semibold">
-                        Skor
+                        Nilai
                       </th>
                     </tr>
                   </thead>
@@ -1114,20 +1038,14 @@ export const InspectionInputWorkspace: React.FC<
                               <div className="font-medium">
                                 {category === 'kinerja_prasarana'
                                   ? `${comp.shortTitle} (${namaPrasarana})`
-                                  : comp.shortTitle}
+                                  : `${comp.no}. ${comp.shortTitle}`}
                               </div>
                               <div className="text-[10px] text-[#1B65A6] font-mono">
                                 {docCount} foto terlampir
                               </div>
                             </td>
-                            <td className="py-2 px-2 text-right font-mono tabular-nums text-slate-500">
-                              {comp.bobotInduk}%
-                            </td>
-                            <td className="py-2 px-2 text-right font-mono tabular-nums text-slate-700">
-                              {res.nilaiFisikKomponen.toFixed(1)}
-                            </td>
                             <td className="py-2 px-2.5 text-right font-mono font-bold tabular-nums text-[#0B2C5F]">
-                              {res.nilaiKondisiFisikTertimbang.toFixed(2)}
+                              {res.nilaiFisikKomponen.toFixed(1)}%
                             </td>
                           </tr>
                         );
@@ -1135,11 +1053,7 @@ export const InspectionInputWorkspace: React.FC<
                   </tbody>
                   <tfoot>
                     <tr className="bg-slate-100 font-bold text-slate-900 border-t border-slate-200">
-                      <td className="py-2 px-2.5">TOTAL</td>
-                      <td className="py-2 px-2 text-right font-mono tabular-nums">
-                        100%
-                      </td>
-                      <td className="py-2 px-2 text-right font-mono">-</td>
+                      <td className="py-2 px-2.5">TOTAL NKF</td>
                       <td className="py-2 px-2.5 text-right font-mono tabular-nums text-[#0B2C5F]">
                         {calc.nkfTotal.toFixed(2)}%
                       </td>
@@ -1148,28 +1062,6 @@ export const InspectionInputWorkspace: React.FC<
                 </table>
               </div>
             </div>
-
-            {category === 'fisik_sungai' && (
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                <div>
-                  <div className="font-semibold text-slate-800">
-                    Komponen 6: Muara Sungai
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
-                    Skor Muara: {calc.muaraScore.toFixed(2)}%
-                  </div>
-                </div>
-                <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={includeMuaraInSummary}
-                    onChange={(e) => setIncludeMuaraInSummary(e.target.checked)}
-                    className="rounded border-slate-300 text-[#0B2C5F]"
-                  />
-                  Ruas Muara
-                </label>
-              </div>
-            )}
 
             <div className="text-[11px] text-slate-500 space-y-1 bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div className="font-semibold text-slate-700 mb-1">
