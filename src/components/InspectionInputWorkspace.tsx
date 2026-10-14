@@ -13,6 +13,13 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  LocateFixed,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
+  Crosshair,
+  Compass,
+  MapPin,
 } from 'lucide-react';
 import {
   BALAI_PSDA_OPTIONS,
@@ -34,6 +41,11 @@ import {
 } from '../types/silussi';
 import { FIELD_SAMPLE_PHOTOS } from '../data/seedData';
 import { GoogleCoordinateMap } from './GoogleCoordinateMap';
+import {
+  BALAI_GPS_PRESETS,
+  getCurrentInspectorPosition,
+  InspectorPosition,
+} from '../utils/geolocation';
 
 interface InspectionInputWorkspaceProps {
   currentUser: UserAccount;
@@ -94,6 +106,84 @@ export const InspectionInputWorkspace: React.FC<
     new Date().toISOString().slice(0, 10)
   );
   const [includeMuaraInSummary, setIncludeMuaraInSummary] = useState(false);
+
+  // Inspector Field GPS Geolocation state
+  const [gpsLoadingTarget, setGpsLoadingTarget] = useState<
+    'awal' | 'akhir' | 'both' | 'detect' | null
+  >(null);
+  const [lastDetectedGps, setLastDetectedGps] =
+    useState<InspectorPosition | null>(null);
+  const [gpsErrorMsg, setGpsErrorMsg] = useState<string | null>(null);
+  const [gpsSuccessNotice, setGpsSuccessNotice] = useState<string | null>(null);
+  const [showBalaiPresets, setShowBalaiPresets] = useState(false);
+
+  const handleDetectGps = async (
+    target: 'awal' | 'akhir' | 'both' | 'detect'
+  ) => {
+    try {
+      setGpsLoadingTarget(target);
+      setGpsErrorMsg(null);
+      const pos = await getCurrentInspectorPosition();
+      setLastDetectedGps(pos);
+
+      if (target === 'awal') {
+        setKoordinatAwal(pos.formatted);
+        setGpsSuccessNotice(
+          `Titik Koordinat Awal disesuaikan ke posisi GPS Anda (${pos.formatted}) · Akurasi: ±${pos.accuracy}m`
+        );
+      } else if (target === 'akhir') {
+        setKoordinatAkhir(pos.formatted);
+        setGpsSuccessNotice(
+          `Titik Koordinat Akhir disesuaikan ke posisi GPS Anda (${pos.formatted}) · Akurasi: ±${pos.accuracy}m`
+        );
+      } else if (target === 'both') {
+        setKoordinatAwal(pos.formatted);
+        setKoordinatAkhir(pos.formatted);
+        setGpsSuccessNotice(
+          `Titik Awal & Akhir disesuaikan ke posisi GPS Anda (${pos.formatted}) · Akurasi: ±${pos.accuracy}m`
+        );
+      } else {
+        setGpsSuccessNotice(
+          `Titik GPS berhasil terdeteksi: ${pos.formatted} (Akurasi: ±${pos.accuracy}m). Silakan pilih pasang ke Titik Awal atau Akhir.`
+        );
+      }
+
+      setTimeout(() => setGpsSuccessNotice(null), 5000);
+    } catch (err) {
+      setGpsErrorMsg(
+        err instanceof Error
+          ? err.message
+          : 'Gagal mendeteksi koordinat GPS perangkat.'
+      );
+    } finally {
+      setGpsLoadingTarget(null);
+    }
+  };
+
+  const handleApplyBalaiPreset = (
+    presetFormatted: string,
+    balaiName: string,
+    target: 'awal' | 'akhir' | 'both' = 'awal'
+  ) => {
+    if (target === 'awal') {
+      setKoordinatAwal(presetFormatted);
+      setGpsSuccessNotice(
+        `Titik Awal disesuaikan ke referensi ${balaiName}: ${presetFormatted}`
+      );
+    } else if (target === 'akhir') {
+      setKoordinatAkhir(presetFormatted);
+      setGpsSuccessNotice(
+        `Titik Akhir disesuaikan ke referensi ${balaiName}: ${presetFormatted}`
+      );
+    } else {
+      setKoordinatAwal(presetFormatted);
+      setKoordinatAkhir(presetFormatted);
+      setGpsSuccessNotice(
+        `Titik Awal & Akhir disesuaikan ke referensi ${balaiName}: ${presetFormatted}`
+      );
+    }
+    setTimeout(() => setGpsSuccessNotice(null), 4000);
+  };
 
   const [subValues, setSubValues] = useState<Record<string, SubComponentValue>>(
     createInitialSubValues
@@ -626,37 +716,298 @@ export const InspectionInputWorkspace: React.FC<
                 </div>
               </div>
 
+              {/* Inspector GPS Sync Panel */}
+              <div className="sm:col-span-2 p-4 rounded-xl bg-gradient-to-r from-sky-50 via-slate-50 to-indigo-50/30 border border-sky-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-sky-150">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#0B2C5F] text-white flex items-center justify-center shrink-0 mt-0.5">
+                      <LocateFixed className="w-4 h-4 text-sky-300" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-bold text-[#0B2C5F]">
+                          Penyesuaian Titik Koordinat GPS Inspektor (Real-Time)
+                        </h4>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-100 text-emerald-800">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                          GPS Aktif
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Klik tombol di bawah untuk mengambil titik koordinat posisi Anda saat berada di lokasi inspeksi sungai atau bangunan prasarana.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleDetectGps('detect')}
+                      disabled={gpsLoadingTarget !== null}
+                      className="px-3 py-1.5 rounded-lg bg-[#0B2C5F] hover:bg-[#1B65A6] disabled:opacity-60 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                    >
+                      {gpsLoadingTarget === 'detect' ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <LocateFixed className="w-3.5 h-3.5 text-sky-300" />
+                      )}
+                      <span>
+                        {gpsLoadingTarget === 'detect'
+                          ? 'Membaca Sensor GPS...'
+                          : 'Ambil Titik Koordinat Saya (GPS)'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowBalaiPresets((prev) => !prev)}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                      title="Lihat titik referensi kantor / posko Balai PSDA se-Jawa Tengah"
+                    >
+                      <MapPin className="w-3 h-3 text-[#1B65A6]" />
+                      <span>{showBalaiPresets ? 'Tutup Referensi' : 'Titik Balai'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* GPS Success Banner */}
+                {gpsSuccessNotice && (
+                  <div className="mt-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-900 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{gpsSuccessNotice}</span>
+                  </div>
+                )}
+
+                {/* GPS Error Banner */}
+                {gpsErrorMsg && (
+                  <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="font-semibold">{gpsErrorMsg}</div>
+                      <div className="text-[11px] text-amber-800/80 mt-1">
+                        Tips: Pastikan izin lokasi aktif pada browser, atau Anda dapat menggunakan tombol <strong>Titik Balai</strong> atau klik langsung pada peta di bawah.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Detected Position Bar with Quick Set Buttons */}
+                {lastDetectedGps && (
+                  <div className="mt-3 pt-3 border-t border-sky-150 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-slate-700">
+                        Hasil GPS Terkini:
+                      </span>
+                      <span className="font-mono text-xs font-bold text-[#0B2C5F] bg-white px-2 py-0.5 rounded border border-slate-200">
+                        {lastDetectedGps.formatted}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">
+                        Akurasi ±{lastDetectedGps.accuracy}m
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        pk. {lastDetectedGps.timestamp} WIB
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setKoordinatAwal(lastDetectedGps.formatted);
+                          setGpsSuccessNotice(
+                            `Titik Koordinat Awal disesuaikan ke ${lastDetectedGps.formatted}`
+                          );
+                          setTimeout(() => setGpsSuccessNotice(null), 4000);
+                        }}
+                        className="px-2.5 py-1 rounded-md bg-[#0B2C5F] hover:bg-[#1B65A6] text-white text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        Pasang ke Titik Awal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setKoordinatAkhir(lastDetectedGps.formatted);
+                          setGpsSuccessNotice(
+                            `Titik Koordinat Akhir disesuaikan ke ${lastDetectedGps.formatted}`
+                          );
+                          setTimeout(() => setGpsSuccessNotice(null), 4000);
+                        }}
+                        className="px-2.5 py-1 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        Pasang ke Titik Akhir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setKoordinatAwal(lastDetectedGps.formatted);
+                          setKoordinatAkhir(lastDetectedGps.formatted);
+                          setGpsSuccessNotice(
+                            `Titik Awal & Akhir disesuaikan ke ${lastDetectedGps.formatted}`
+                          );
+                          setTimeout(() => setGpsSuccessNotice(null), 4000);
+                        }}
+                        className="px-2.5 py-1 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                        title="Cocok untuk penilaian bangunan prasarana sungai (lokasi inspeksi tunggal)"
+                      >
+                        Pasang ke Keduanya
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Central Java Balai PSDA Quick Reference Presets */}
+                {showBalaiPresets && (
+                  <div className="mt-3 pt-3 border-t border-sky-150">
+                    <div className="text-[11px] font-semibold text-slate-700 mb-2 flex items-center justify-between">
+                      <span>Titik Referensi Wilayah Balai PSDA Provinsi Jawa Tengah:</span>
+                      <span className="text-[10px] text-slate-500 font-normal">
+                        Klik untuk memasang koordinat referensi
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {BALAI_GPS_PRESETS.map((preset) => (
+                        <div
+                          key={preset.balaiName}
+                          className="p-2 rounded-lg bg-white border border-slate-200 text-left space-y-1"
+                        >
+                          <div className="text-[11px] font-bold text-[#0B2C5F] truncate">
+                            {preset.balaiName}
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500">
+                            {preset.formatted}
+                          </div>
+                          <div className="text-[10px] text-slate-500 truncate">
+                            {preset.description}
+                          </div>
+                          <div className="flex items-center gap-1 pt-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleApplyBalaiPreset(
+                                  preset.formatted,
+                                  preset.balaiName,
+                                  'awal'
+                                )
+                              }
+                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-50 text-[#1B65A6] hover:bg-sky-100 cursor-pointer"
+                            >
+                              Set Awal
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleApplyBalaiPreset(
+                                  preset.formatted,
+                                  preset.balaiName,
+                                  'akhir'
+                                )
+                              }
+                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 cursor-pointer"
+                            >
+                              Set Akhir
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleApplyBalaiPreset(
+                                  preset.formatted,
+                                  preset.balaiName,
+                                  'both'
+                                )
+                              }
+                              className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
+                            >
+                              Keduanya
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Titik Koordinat Awal Field with Direct Quick GPS Button */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Titik Koordinat Awal (X, Y)
-                </label>
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Titik Koordinat Awal (X, Y)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleDetectGps('awal')}
+                    disabled={gpsLoadingTarget !== null}
+                    className="text-[11px] font-semibold text-[#1B65A6] hover:text-[#0B2C5F] inline-flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Klik untuk mengambil koordinat GPS perangkat Anda saat ini dan pasang sebagai Titik Awal"
+                  >
+                    {gpsLoadingTarget === 'awal' ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-[#1B65A6]" />
+                    ) : (
+                      <LocateFixed className="w-3 h-3 text-[#1B65A6]" />
+                    )}
+                    <span>
+                      {gpsLoadingTarget === 'awal'
+                        ? 'Membaca GPS...'
+                        : 'Sesuaikan Titik Saya Saat Ini'}
+                    </span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={koordinatAwal}
                   onChange={(e) => setKoordinatAwal(e.target.value)}
-                  placeholder="-6.8705, 109.0421"
+                  placeholder="-6.870500, 109.042100"
                   className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-slate-300 focus:border-[#1B65A6] outline-none"
                 />
+                <span className="block text-[10px] text-slate-500 font-mono mt-1">
+                  Format: Lintang, Bujur (contoh: -6.921400, 109.412500)
+                </span>
               </div>
 
+              {/* Titik Koordinat Akhir Field with Direct Quick GPS Button */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Titik Koordinat Akhir (X, Y)
-                </label>
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Titik Koordinat Akhir (X, Y)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleDetectGps('akhir')}
+                    disabled={gpsLoadingTarget !== null}
+                    className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Klik untuk mengambil koordinat GPS perangkat Anda saat ini dan pasang sebagai Titik Akhir"
+                  >
+                    {gpsLoadingTarget === 'akhir' ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-emerald-700" />
+                    ) : (
+                      <LocateFixed className="w-3 h-3 text-emerald-700" />
+                    )}
+                    <span>
+                      {gpsLoadingTarget === 'akhir'
+                        ? 'Membaca GPS...'
+                        : 'Sesuaikan Titik Saya Saat Ini'}
+                    </span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={koordinatAkhir}
                   onChange={(e) => setKoordinatAkhir(e.target.value)}
-                  placeholder="-6.8412, 109.0518"
+                  placeholder="-6.841200, 109.051800"
                   className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-slate-300 focus:border-[#1B65A6] outline-none"
                 />
+                <span className="block text-[10px] text-slate-500 font-mono mt-1">
+                  Format: Lintang, Bujur (dapat sama jika inspeksi bangunan tunggal)
+                </span>
               </div>
             </div>
 
-            {/* Live Coordinate Map Preview for both Kondisi Fisik Sungai & Kinerja Prasarana */}
+            {/* Live Interactive Coordinate Map with direct point clicking and GPS synchronization */}
             <GoogleCoordinateMap
               koordinatAwal={koordinatAwal}
               koordinatAkhir={koordinatAkhir}
+              onChangeKoordinatAwal={setKoordinatAwal}
+              onChangeKoordinatAkhir={setKoordinatAkhir}
               labelContext={
                 category === 'kinerja_prasarana'
                   ? `${namaPrasarana}${namaSungai ? ` — ${namaSungai}` : ''}`
