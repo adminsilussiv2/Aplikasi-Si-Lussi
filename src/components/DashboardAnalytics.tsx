@@ -39,6 +39,7 @@ interface DashboardAnalyticsProps {
   ) => void;
   onDeleteInspection: (inspectionId: string) => void;
   onNavigateAdmin: () => void;
+  onNavigateToRekap?: () => void;
   onLogExport: (format: string, inspection?: RiverInspection) => void;
 }
 
@@ -51,6 +52,7 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({
   onQuickUpdateFollowUp,
   onDeleteInspection,
   onNavigateAdmin,
+  onNavigateToRekap,
   onLogExport,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,6 +220,18 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({
             <Plus className="w-4 h-4" />
             Input Kinerja Prasarana
           </button>
+
+          {currentUser.role === 'admin' && onNavigateToRekap && (
+            <button
+              type="button"
+              onClick={onNavigateToRekap}
+              className="px-3.5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-xs"
+              title="Buka rekapitulasi lengkap seluruh inputan blangko penilaian sungai"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Pilihan Rekap Semua Inputan ({inspections.length})
+            </button>
+          )}
 
           <button
             type="button"

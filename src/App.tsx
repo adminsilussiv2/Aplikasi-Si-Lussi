@@ -14,6 +14,7 @@ import {
   X,
   Waves,
   Building2,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   ActivityLog,
@@ -33,6 +34,7 @@ import { DashboardAnalytics } from './components/DashboardAnalytics';
 import { InspectionInputWorkspace } from './components/InspectionInputWorkspace';
 import { InspectionDetailModal } from './components/InspectionDetailModal';
 import { AdminManagementView } from './components/AdminManagementView';
+import { AdminInspectionRecapView } from './components/AdminInspectionRecapView';
 import {
   createFirestoreActivityLog,
   subscribeFirestoreAccounts,
@@ -59,7 +61,8 @@ type ActiveTab =
   | 'dashboard'
   | 'input_fisik'
   | 'input_prasarana'
-  | 'accounts';
+  | 'accounts'
+  | 'rekap';
 
 function getAccountTimestamp(u: UserAccount): number {
   const regTime = new Date(u.registeredAt || 0).getTime() || 0;
@@ -788,6 +791,27 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
+                    setActiveNav('rekap');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    activeNav === 'rekap'
+                      ? 'bg-[#1B65A6] text-white shadow-xs'
+                      : 'text-sky-100/80 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <FileSpreadsheet className="w-4 h-4 shrink-0 text-amber-300" />
+                    <span>Rekap Semua Inputan</span>
+                  </span>
+                  <span className="font-mono text-[11px] bg-white/15 px-1.5 py-0.5 rounded text-sky-200">
+                    {inspections.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
                     setActiveNav('accounts');
                     setMobileMenuOpen(false);
                   }}
@@ -901,17 +925,31 @@ export default function App() {
             </button>
 
             {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setActiveNav('accounts')}
-                className={`hover:text-[#0B2C5F] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  activeNav === 'accounts'
-                    ? 'text-[#0B2C5F] font-bold underline underline-offset-4'
-                    : ''
-                }`}
-              >
-                Persetujuan Inspektor ({pendingAccountsCount})
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveNav('rekap')}
+                  className={`hover:text-[#0B2C5F] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    activeNav === 'rekap'
+                      ? 'text-[#0B2C5F] font-bold underline underline-offset-4'
+                      : ''
+                  }`}
+                >
+                  Rekap Semua Inputan ({inspections.length})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveNav('accounts')}
+                  className={`hover:text-[#0B2C5F] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    activeNav === 'accounts'
+                      ? 'text-[#0B2C5F] font-bold underline underline-offset-4'
+                      : ''
+                  }`}
+                >
+                  Persetujuan Inspektor ({pendingAccountsCount})
+                </button>
+              </>
             )}
           </nav>
         </header>
@@ -952,6 +990,9 @@ export default function App() {
               onNavigateAdmin={() => {
                 if (isAdmin) setActiveNav('accounts');
               }}
+              onNavigateToRekap={() => {
+                if (isAdmin) setActiveNav('rekap');
+              }}
               onLogExport={handleLogExport}
             />
           )}
@@ -977,6 +1018,17 @@ export default function App() {
             />
           )}
 
+          {isAdmin && activeNav === 'rekap' && (
+            <AdminInspectionRecapView
+              inspections={inspections}
+              currentUser={currentUser}
+              onSelectInspection={(insp) => setSelectedInspectionId(insp.id)}
+              onUpdateFollowUp={handleUpdateFollowUp}
+              onDeleteInspection={handleDeleteInspection}
+              onLogExport={handleLogExport}
+            />
+          )}
+
           {isAdmin && activeNav === 'accounts' && (
             <AdminManagementView
               currentUser={currentUser}
@@ -985,6 +1037,8 @@ export default function App() {
               onRejectUser={handleRejectUser}
               onRegisterInspector={handleRegisterInspector}
               onManualRefresh={syncUsersWithServer}
+              onNavigateToRekap={() => setActiveNav('rekap')}
+              totalInspectionsCount={inspections.length}
             />
           )}
         </main>

@@ -7,6 +7,7 @@ import {
   Radio,
   UserPlus,
   RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   BALAI_PSDA_OPTIONS,
@@ -23,6 +24,8 @@ interface AdminManagementViewProps {
     newUser: Omit<UserAccount, 'id' | 'status' | 'registeredAt' | 'role'>
   ) => Promise<UserAccount> | UserAccount;
   onManualRefresh?: () => void;
+  onNavigateToRekap?: () => void;
+  totalInspectionsCount?: number;
 }
 
 export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
@@ -32,6 +35,8 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
   onRejectUser,
   onRegisterInspector,
   onManualRefresh,
+  onNavigateToRekap,
+  totalInspectionsCount,
 }) => {
   const [balaiFilter, setBalaiFilter] = useState<string>('ALL');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -151,6 +156,18 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start sm:self-auto">
+          {onNavigateToRekap && (
+            <button
+              type="button"
+              onClick={onNavigateToRekap}
+              className="px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              title="Buka pilihan rekap seluruh inputan blangko penilaian"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Pilihan Rekap Semua Inputan {totalInspectionsCount !== undefined ? `(${totalInspectionsCount})` : ''}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
