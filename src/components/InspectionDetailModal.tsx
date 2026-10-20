@@ -7,6 +7,7 @@ import {
   ExternalLink,
   CheckCircle2,
   Trash2,
+  Pencil,
 } from 'lucide-react';
 import {
   FollowUpStatus,
@@ -31,6 +32,7 @@ interface InspectionDetailModalProps {
     notes: string
   ) => void;
   onDeleteInspection?: (inspectionId: string) => void;
+  onEditInspection?: (inspection: RiverInspection) => void;
   onLogExport: (format: string, inspection: RiverInspection) => void;
 }
 
@@ -40,6 +42,7 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
   onClose,
   onUpdateFollowUp,
   onDeleteInspection,
+  onEditInspection,
   onLogExport,
 }) => {
   const [followUpStatus, setFollowUpStatus] = useState<FollowUpStatus>(
@@ -120,6 +123,18 @@ export const InspectionDetailModal: React.FC<InspectionDetailModalProps> = ({
               <Download className="w-3.5 h-3.5" />
               CSV
             </button>
+
+            {onEditInspection && (
+              <button
+                type="button"
+                onClick={() => onEditInspection(inspection)}
+                className="px-3.5 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-xs"
+                title="Edit dan perbarui isian blangko ini"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit Data
+              </button>
+            )}
 
             {currentUser.role === 'admin' && onDeleteInspection && (
               <button

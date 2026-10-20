@@ -10,6 +10,7 @@ import {
   Building2,
   ShieldCheck,
   Trash2,
+  Pencil,
 } from 'lucide-react';
 import {
   BALAI_PSDA_OPTIONS,
@@ -40,6 +41,7 @@ interface DashboardAnalyticsProps {
   onDeleteInspection: (inspectionId: string) => void;
   onNavigateAdmin: () => void;
   onNavigateToRekap?: () => void;
+  onEditInspection?: (inspection: RiverInspection) => void;
   onLogExport: (format: string, inspection?: RiverInspection) => void;
 }
 
@@ -53,6 +55,7 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({
   onDeleteInspection,
   onNavigateAdmin,
   onNavigateToRekap,
+  onEditInspection,
   onLogExport,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -750,6 +753,17 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({
 
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex items-center gap-1.5">
+                          {onEditInspection && (
+                            <button
+                              type="button"
+                              onClick={() => onEditInspection(insp)}
+                              className="px-2.5 py-1.5 rounded-lg border border-sky-300 bg-sky-50 hover:bg-[#1B65A6] text-[#0B2C5F] hover:text-white font-semibold text-xs inline-flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                              title="Edit Data Blangko Penilaian Ini"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Edit
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => onSelectInspection(insp)}

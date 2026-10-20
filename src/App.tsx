@@ -154,6 +154,8 @@ export default function App() {
   const [selectedInspectionId, setSelectedInspectionId] = useState<
     string | null
   >(null);
+  const [editingInspection, setEditingInspection] =
+    useState<RiverInspection | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toastBanner, setToastBanner] = useState<string | null>(null);
 
@@ -616,6 +618,53 @@ export default function App() {
     );
   };
 
+  const handleStartEditInspection = (inspection: RiverInspection) => {
+    setEditingInspection(inspection);
+    setSelectedInspectionId(null);
+    setActiveNav(
+      inspection.category === 'kinerja_prasarana'
+        ? 'input_prasarana'
+        : 'input_fisik'
+    );
+    showToast(
+      `Membuka mode edit untuk data: ${inspection.namaSungai} (${inspection.kodeInspeksi})`
+    );
+  };
+
+  const handleCancelEdit = () => {
+    setEditingInspection(null);
+    setActiveNav('dashboard');
+  };
+
+  const handleUpdateInspection = (updatedInspection: RiverInspection) => {
+    if (!currentUser) return;
+
+    setInspections((prev) =>
+      prev.map((item) =>
+        item.id === updatedInspection.id ? updatedInspection : item
+      )
+    );
+    setEditingInspection(null);
+    setActiveNav('dashboard');
+
+    const jenisLabel =
+      updatedInspection.category === 'kinerja_prasarana'
+        ? 'Kinerja Prasarana Sungai'
+        : 'Kondisi Fisik Sungai';
+
+    appendActivityLog(
+      currentUser,
+      'UPDATE_INSPECTION',
+      `Memperbarui data ${jenisLabel}: ${updatedInspection.namaSungai} (${updatedInspection.noRuas})`,
+      `Skor hasil pembaruan: ${updatedInspection.nkfTotal.toFixed(2)}% — ${updatedInspection.riskLevel} / ${updatedInspection.performanceLevel} (Diperbarui oleh ${currentUser.name})`,
+      updatedInspection.id
+    );
+
+    showToast(
+      `Perubahan data ${jenisLabel} (${updatedInspection.namaSungai} — ${updatedInspection.noRuas}) berhasil disimpan!`
+    );
+  };
+
   const handleDeleteInspection = (inspectionId: string) => {
     if (!currentUser || currentUser.role !== 'admin') return;
     const target = inspections.find((i) => i.id === inspectionId);
@@ -752,6 +801,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
+                setEditingInspection(null);
                 setActiveNav('input_fisik');
                 setMobileMenuOpen(false);
               }}
@@ -768,6 +818,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
+                setEditingInspection(null);
                 setActiveNav('input_prasarana');
                 setMobileMenuOpen(false);
               }}
@@ -902,7 +953,10 @@ export default function App() {
 
             <button
               type="button"
-              onClick={() => setActiveNav('input_fisik')}
+              onClick={() => {
+                setEditingInspection(null);
+                setActiveNav('input_fisik');
+              }}
               className={`hover:text-[#0B2C5F] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 activeNav === 'input_fisik'
                   ? 'text-[#0B2C5F] font-bold underline underline-offset-4'
@@ -914,7 +968,10 @@ export default function App() {
 
             <button
               type="button"
-              onClick={() => setActiveNav('input_prasarana')}
+              onClick={() => {
+                setEditingInspection(null);
+                setActiveNav('input_prasarana');
+              }}
               className={`hover:text-[#0B2C5F] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 activeNav === 'input_prasarana'
                   ? 'text-[#0B2C5F] font-bold underline underline-offset-4'
@@ -975,14 +1032,16 @@ export default function App() {
               inspections={inspections}
               currentUser={currentUser}
               pendingAccountsCount={pendingAccountsCount}
-              onOpenInspectionCategory={(cat: InspectionCategory) =>
+              onOpenInspectionCategory={(cat: InspectionCategory) => {
+                setEditingInspection(null);
                 setActiveNav(
                   cat === 'kinerja_prasarana'
                     ? 'input_prasarana'
                     : 'input_fisik'
-                )
-              }
+                );
+              }}
               onSelectInspection={(insp) => setSelectedInspectionId(insp.id)}
+              onEditInspection={handleStartEditInspection}
               onQuickUpdateFollowUp={(id, status) =>
                 handleUpdateFollowUp(id, status)
               }
@@ -1006,6 +1065,7 @@ export default function App() {
                   : 'fisik_sungai'
               }
               existingCount={inspections.length}
+              editingInspection={editingInspection}
               onChangeCategory={(cat) =>
                 setActiveNav(
                   cat === 'kinerja_prasarana'
@@ -1014,7 +1074,12 @@ export default function App() {
                 )
               }
               onSaveInspection={handleSaveInspection}
-              onBackToDashboard={() => setActiveNav('dashboard')}
+              onUpdateInspection={handleUpdateInspection}
+              onCancelEdit={handleCancelEdit}
+              onBackToDashboard={() => {
+                setEditingInspection(null);
+                setActiveNav('dashboard');
+              }}
             />
           )}
 
@@ -1023,6 +1088,7 @@ export default function App() {
               inspections={inspections}
               currentUser={currentUser}
               onSelectInspection={(insp) => setSelectedInspectionId(insp.id)}
+              onEditInspection={handleStartEditInspection}
               onUpdateFollowUp={handleUpdateFollowUp}
               onDeleteInspection={handleDeleteInspection}
               onLogExport={handleLogExport}
@@ -1057,6 +1123,7 @@ export default function App() {
           inspection={selectedInspection}
           currentUser={currentUser}
           onClose={() => setSelectedInspectionId(null)}
+          onEditInspection={handleStartEditInspection}
           onUpdateFollowUp={handleUpdateFollowUp}
           onDeleteInspection={handleDeleteInspection}
           onLogExport={handleLogExport}

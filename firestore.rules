@@ -120,8 +120,7 @@ service cloud.firestore {
     }
 
     match /inspector_accounts/{accountId} {
-      allow get: if isValidId(accountId);
-      allow list: if existing().role in ['admin', 'inspector'];
+      allow get, list: if true;
       allow create: if isValidId(accountId) && isValidInspectorAccount(incoming(), accountId);
       allow update: if isValidId(accountId) &&
         isValidInspectorAccount(incoming(), accountId) &&
@@ -143,8 +142,7 @@ service cloud.firestore {
     }
 
     match /activity_logs/{logId} {
-      allow get: if isValidId(logId);
-      allow list: if existing().actorRole in ['admin', 'inspector'];
+      allow get, list: if true;
       allow create: if isValidId(logId) && isValidActivityLog(incoming(), logId);
       allow update, delete: if false;
     }

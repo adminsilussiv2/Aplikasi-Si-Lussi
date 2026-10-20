@@ -1,6 +1,118 @@
 {
   "users": [
     {
+      "id": "usr-insp-1792391077761-qcb4",
+      "name": "Budi Test",
+      "nip": "199901012025011001",
+      "email": "budi@test.com",
+      "jabatan": "Inspektor",
+      "balaiPsda": "BPSDA Jratun Seluna",
+      "password": "password123",
+      "role": "inspector",
+      "status": "pending",
+      "registeredAt": "2026-10-19T06:24:37.761Z"
+    },
+    {
+      "registeredAt": "2026-10-12T06:25:54.943Z",
+      "jabatan": "Inspektor Sungai Lapangan",
+      "role": "inspector",
+      "nip": "4156566",
+      "status": "pending",
+      "password": "1234",
+      "email": "cccc",
+      "id": "usr-insp-4156566",
+      "balaiPsda": "BPSDA Bengawan Solo",
+      "name": "bobi"
+    },
+    {
+      "jabatan": "Inspektor Sungai Lapangan",
+      "password": "gggjjjrrr",
+      "approvedAt": "2026-10-12T06:45:44.911Z",
+      "status": "approved",
+      "registeredAt": "2026-10-12T06:45:41.823Z",
+      "balaiPsda": "BPSDA Jratun Seluna",
+      "role": "inspector",
+      "approvedBy": "Muhammad Irfan Rosyid, ST",
+      "nip": "198610072009031004",
+      "email": "gjrprima@gmail.com",
+      "id": "usr-insp-198610072009031004",
+      "name": "Ganjar"
+    },
+    {
+      "nip": "18283847",
+      "password": "1234",
+      "role": "inspector",
+      "registeredAt": "2026-10-12T06:42:47.834Z",
+      "email": "Irfanr",
+      "id": "usr-insp-18283847",
+      "name": "Irfan",
+      "status": "pending",
+      "jabatan": "Inspektor Sungai Lapangan",
+      "balaiPsda": "BPSDA Serayu Bogowonto"
+    },
+    {
+      "registeredAt": "2026-10-12T06:26:23.823Z",
+      "approvedBy": "Muhammad Irfan Rosyid, ST",
+      "status": "approved",
+      "id": "usr-insp-1791786383823-l2jx",
+      "email": "cdfafaf",
+      "approvedAt": "2026-10-12T06:27:06.726Z",
+      "role": "inspector",
+      "password": "1234",
+      "jabatan": "Inspektor Sungai Lapangan",
+      "balaiPsda": "BPSDA Jratun Seluna",
+      "name": "bbbb",
+      "nip": "111"
+    },
+    {
+      "nip": "1111222",
+      "name": "Adi",
+      "password": "Adi123",
+      "jabatan": "Inspektor Sungai Lapangan",
+      "registeredAt": "2026-10-12T05:47:46.055Z",
+      "role": "inspector",
+      "balaiPsda": "BPSDA Jratun Seluna",
+      "id": "usr-insp-1791784066055-kapk",
+      "email": "adi@gmail",
+      "status": "pending"
+    },
+    {
+      "name": "coba coba",
+      "balaiPsda": "BPSDA Jratun Seluna",
+      "nip": "11111111111122",
+      "id": "usr-insp-1791783854218-tuzb",
+      "registeredAt": "2026-10-12T05:44:14.218Z",
+      "jabatan": "Inspektor Sungai Lapangan",
+      "role": "inspector",
+      "email": "mirfanr.ce@gmail.com",
+      "status": "pending",
+      "password": "MIR123mir"
+    },
+    {
+      "registeredAt": "2026-10-12T04:11:51.674Z",
+      "name": "COba1",
+      "jabatan": "pengelola",
+      "id": "usr-insp-1791778311674",
+      "email": "mirfanr.ce@gmail.com",
+      "password": "MIR123mir",
+      "status": "pending",
+      "role": "inspector",
+      "nip": "199999999999",
+      "balaiPsda": "BPSDA Jratun Seluna"
+    },
+    {
+      "id": "usr-insp-1791779862512-x8p6",
+      "name": "Tes Inspektor",
+      "nip": "199601012023031001",
+      "email": "tes@pupr.jatengprov.go.id",
+      "jabatan": "Inspektor Sungai Lapangan",
+      "balaiPsda": "BPSDA Pemali Comal",
+      "password": "password123",
+      "role": "inspector",
+      "status": "pending",
+      "registeredAt": "2026-10-12T04:37:42.512Z"
+    },
+    {
       "id": "usr-admin-01",
       "name": "Muhammad Irfan Rosyid, ST",
       "email": "admin@pupr.jatengprov.go.id",
@@ -97,6 +209,17 @@
   ],
   "activityLogs": [
     {
+      "id": "log-1792391077761-93ej",
+      "timestamp": "2026-10-19T06:24:37.761Z",
+      "actorId": "usr-insp-1792391077761-qcb4",
+      "actorName": "Budi Test",
+      "actorRole": "inspector",
+      "actorBalai": "BPSDA Jratun Seluna",
+      "actionType": "REGISTER_ACCOUNT",
+      "summary": "Mengajukan pendaftaran akun Inspektor baru: Budi Test",
+      "detail": "NIP 199901012025011001 — Unit Kerja: BPSDA Jratun Seluna (Status: Menunggu Persetujuan Administrator)"
+    },
+    {
       "id": "log-006",
       "timestamp": "2026-10-10T08:15:00.000Z",
       "actorId": "usr-insp-04",
@@ -167,5 +290,5 @@
       "relatedId": "insp-2026-001"
     }
   ],
-  "updatedAt": "2026-10-12T05:08:15.015Z"
+  "updatedAt": "2026-10-19T06:24:37.761Z"
 }

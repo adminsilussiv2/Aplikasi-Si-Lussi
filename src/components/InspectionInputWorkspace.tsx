@@ -44,8 +44,11 @@ interface InspectionInputWorkspaceProps {
   currentUser: UserAccount;
   initialCategory: InspectionCategory;
   existingCount: number;
+  editingInspection?: RiverInspection | null;
   onChangeCategory: (category: InspectionCategory) => void;
   onSaveInspection: (newInspection: RiverInspection) => void;
+  onUpdateInspection?: (updatedInspection: RiverInspection) => void;
+  onCancelEdit?: () => void;
   onBackToDashboard: () => void;
 }
 
@@ -72,33 +75,94 @@ export const InspectionInputWorkspace: React.FC<
   currentUser,
   initialCategory,
   existingCount,
+  editingInspection,
   onChangeCategory,
   onSaveInspection,
+  onUpdateInspection,
+  onCancelEdit,
   onBackToDashboard,
 }) => {
-  const [category, setCategory] = useState<InspectionCategory>(initialCategory);
+  const isEditing = Boolean(editingInspection);
+
+  const [category, setCategory] = useState<InspectionCategory>(() =>
+    editingInspection ? editingInspection.category : initialCategory
+  );
+
+  // General River / Prasarana Metadata
+  const [namaSungai, setNamaSungai] = useState(() =>
+    editingInspection ? editingInspection.namaSungai : ''
+  );
+  const [namaPrasarana, setNamaPrasarana] =
+    useState<NamaBangunanPrasarana>(() =>
+      (editingInspection?.namaPrasarana as NamaBangunanPrasarana) || 'Bendung'
+    );
+  const [noRuas, setNoRuas] = useState(() =>
+    editingInspection ? editingInspection.noRuas : ''
+  );
+  const [panjangRuasKm, setPanjangRuasKm] = useState<string>(() =>
+    editingInspection ? String(editingInspection.panjangRuasKm ?? '') : '4.2'
+  );
+  const [namaWs, setNamaWs] = useState<WilayahSungai>(() =>
+    editingInspection ? editingInspection.namaWs : 'WS Pemali Comal'
+  );
+  const [balaiPsda, setBalaiPsda] = useState<BalaiPSDA>(() =>
+    editingInspection ? editingInspection.balaiPsda : currentUser.balaiPsda
+  );
+  const [desa, setDesa] = useState(() =>
+    editingInspection ? editingInspection.desa : ''
+  );
+  const [kecamatan, setKecamatan] = useState(() =>
+    editingInspection ? editingInspection.kecamatan : ''
+  );
+  const [kabupatenKota, setKabupatenKota] = useState(() =>
+    editingInspection ? editingInspection.kabupatenKota : ''
+  );
+  const [koordinatAwal, setKoordinatAwal] = useState(() =>
+    editingInspection ? editingInspection.koordinatAwal : '-6.9214, 109.4125'
+  );
+  const [koordinatAkhir, setKoordinatAkhir] = useState(() =>
+    editingInspection ? editingInspection.koordinatAkhir : '-6.8950, 109.4310'
+  );
+  const [tanggalPelaksanaan, setTanggalPelaksanaan] = useState(() =>
+    editingInspection
+      ? editingInspection.tanggalPelaksanaan
+      : new Date().toISOString().slice(0, 10)
+  );
+  const [includeMuaraInSummary, setIncludeMuaraInSummary] = useState(() =>
+    editingInspection ? Boolean(editingInspection.includeMuaraInSummary) : false
+  );
+
+  const [subValues, setSubValues] = useState<Record<string, SubComponentValue>>(() =>
+    editingInspection?.subValues
+      ? { ...createInitialSubValues(), ...editingInspection.subValues }
+      : createInitialSubValues()
+  );
 
   useEffect(() => {
-    setCategory(initialCategory);
-  }, [initialCategory]);
-
-  // General River / Prasarana Metadata (No Luas DAS, No Panjang Sungai, No Jenis Prasarana Utama)
-  const [namaSungai, setNamaSungai] = useState('');
-  const [namaPrasarana, setNamaPrasarana] =
-    useState<NamaBangunanPrasarana>('Bendung');
-  const [noRuas, setNoRuas] = useState('');
-  const [panjangRuasKm, setPanjangRuasKm] = useState<string>('4.2');
-  const [namaWs, setNamaWs] = useState<WilayahSungai>('WS Pemali Comal');
-  const [balaiPsda, setBalaiPsda] = useState<BalaiPSDA>(currentUser.balaiPsda);
-  const [desa, setDesa] = useState('');
-  const [kecamatan, setKecamatan] = useState('');
-  const [kabupatenKota, setKabupatenKota] = useState('');
-  const [koordinatAwal, setKoordinatAwal] = useState('-6.9214, 109.4125');
-  const [koordinatAkhir, setKoordinatAkhir] = useState('-6.8950, 109.4310');
-  const [tanggalPelaksanaan, setTanggalPelaksanaan] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
-  const [includeMuaraInSummary, setIncludeMuaraInSummary] = useState(false);
+    if (editingInspection) {
+      setCategory(editingInspection.category);
+      setNamaSungai(editingInspection.namaSungai);
+      if (editingInspection.namaPrasarana) {
+        setNamaPrasarana(editingInspection.namaPrasarana as NamaBangunanPrasarana);
+      }
+      setNoRuas(editingInspection.noRuas);
+      setPanjangRuasKm(String(editingInspection.panjangRuasKm ?? ''));
+      setNamaWs(editingInspection.namaWs);
+      setBalaiPsda(editingInspection.balaiPsda);
+      setDesa(editingInspection.desa);
+      setKecamatan(editingInspection.kecamatan);
+      setKabupatenKota(editingInspection.kabupatenKota);
+      setKoordinatAwal(editingInspection.koordinatAwal);
+      setKoordinatAkhir(editingInspection.koordinatAkhir);
+      setTanggalPelaksanaan(editingInspection.tanggalPelaksanaan);
+      setIncludeMuaraInSummary(Boolean(editingInspection.includeMuaraInSummary));
+      if (editingInspection.subValues) {
+        setSubValues({ ...createInitialSubValues(), ...editingInspection.subValues });
+      }
+    } else {
+      setCategory(initialCategory);
+    }
+  }, [editingInspection, initialCategory]);
 
   // Inspector Field GPS state
   const [gpsLoadingTarget, setGpsLoadingTarget] = useState<'awal' | 'akhir' | null>(null);
@@ -129,9 +193,6 @@ export const InspectionInputWorkspace: React.FC<
     }
   };
 
-  const [subValues, setSubValues] = useState<Record<string, SubComponentValue>>(
-    createInitialSubValues
-  );
   // Track which sub-components have their optional documentation drawer open
   const [openDocSubIds, setOpenDocSubIds] = useState<Record<string, boolean>>(
     {}
@@ -328,6 +389,42 @@ export const InspectionInputWorkspace: React.FC<
       };
     }
 
+    if (isEditing && editingInspection) {
+      const updatedInspection: RiverInspection = {
+        ...editingInspection,
+        category,
+        namaSungai: namaSungai.trim(),
+        namaPrasarana:
+          category === 'kinerja_prasarana' ? namaPrasarana : undefined,
+        noRuas: noRuas.trim(),
+        panjangRuasKm: parseFloat(panjangRuasKm) || 0,
+        namaWs,
+        desa: desa.trim(),
+        kecamatan: kecamatan.trim(),
+        kabupatenKota: kabupatenKota.trim(),
+        balaiPsda,
+        koordinatAwal: koordinatAwal.trim(),
+        koordinatAkhir: koordinatAkhir.trim(),
+        tanggalPelaksanaan,
+        subValues,
+        componentDocs: aggregatedDocs,
+        nkfTotal: calc.nkfTotal,
+        muaraScore: calc.muaraScore,
+        includeMuaraInSummary,
+        riskLevel: calc.riskLevel,
+        performanceLevel: calc.performanceLevel,
+        maintenanceAction: calc.maintenanceAction,
+        physicalStatusLabel: calc.physicalStatusLabel,
+      };
+
+      if (onUpdateInspection) {
+        onUpdateInspection(updatedInspection);
+      } else {
+        onSaveInspection(updatedInspection);
+      }
+      return;
+    }
+
     const followUpStatus =
       calc.nkfTotal <= 70 ? 'Perlu Tindak Lanjut' : 'Aman / Terkendali';
 
@@ -391,22 +488,47 @@ export const InspectionInputWorkspace: React.FC<
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200">
           <div>
-            <div className="text-xs font-mono uppercase tracking-wider text-[#1B65A6]">
-              Dinas Pekerjaan Umum dan Penataan Ruang Provinsi Jawa Tengah
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono uppercase tracking-wider text-[#1B65A6]">
+                Dinas Pekerjaan Umum dan Penataan Ruang Provinsi Jawa Tengah
+              </span>
+              {isEditing && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  Mode Edit Data Inputan
+                </span>
+              )}
             </div>
             <h1 className="font-display text-xl sm:text-2xl font-extrabold text-[#0B2C5F] mt-0.5">
-              Formulir Input Blangko Inspeksi Lapangan
+              {isEditing
+                ? `Edit Data Penilaian: ${editingInspection?.namaSungai || namaSungai} (${editingInspection?.kodeInspeksi || ''})`
+                : 'Formulir Input Blangko Inspeksi Lapangan'}
             </h1>
+            {isEditing && (
+              <p className="text-xs text-slate-500 mt-0.5">
+                Perbarui parameter penilaian lapangan, koordinat, lokasi, atau dokumentasi ruas ini.
+              </p>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={onBackToDashboard}
-            className="self-start lg:self-auto px-3.5 py-2 rounded-xl border border-slate-200 hover:border-[#0B2C5F] text-xs font-semibold text-slate-700 hover:text-[#0B2C5F] flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Kembali ke Dashboard Analitik
-          </button>
+          <div className="flex items-center gap-2 self-start lg:self-auto">
+            {isEditing && onCancelEdit && (
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+              >
+                Batal Edit
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onBackToDashboard}
+              className="px-3.5 py-2 rounded-xl border border-slate-200 hover:border-[#0B2C5F] text-xs font-semibold text-slate-700 hover:text-[#0B2C5F] flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Kembali ke Dashboard
+            </button>
+          </div>
         </div>
 
         {/* 2 Inspection Type Selector Cards */}
@@ -1211,8 +1333,20 @@ export const InspectionInputWorkspace: React.FC<
               className="w-full py-3 px-4 bg-[#0B2C5F] hover:bg-[#1B65A6] text-white font-semibold text-sm rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              Simpan Data Inspeksi &amp; Tampilkan di Peta
+              {isEditing
+                ? 'Simpan Perubahan Data Inspeksi'
+                : 'Simpan Data Inspeksi & Tampilkan di Peta'}
             </button>
+
+            {isEditing && onCancelEdit && (
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="w-full py-2.5 px-4 border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl transition-colors cursor-pointer text-center"
+              >
+                Batal Edit &amp; Kembali
+              </button>
+            )}
           </div>
         </div>
       </form>

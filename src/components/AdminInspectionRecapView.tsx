@@ -30,6 +30,7 @@ import {
   BarChart3,
   Users2,
   Compass,
+  Pencil,
 } from 'lucide-react';
 import {
   BALAI_PSDA_OPTIONS,
@@ -58,6 +59,7 @@ interface AdminInspectionRecapViewProps {
     notes?: string
   ) => void;
   onDeleteInspection: (inspectionId: string) => void;
+  onEditInspection?: (inspection: RiverInspection) => void;
   onLogExport?: (format: string, inspection?: RiverInspection) => void;
 }
 
@@ -69,6 +71,7 @@ export const AdminInspectionRecapView: React.FC<AdminInspectionRecapViewProps> =
   onSelectInspection,
   onUpdateFollowUp,
   onDeleteInspection,
+  onEditInspection,
   onLogExport,
 }) => {
   const [activeTab, setActiveTab] = useState<RecapViewTab>('master');
@@ -843,6 +846,17 @@ export const AdminInspectionRecapView: React.FC<AdminInspectionRecapViewProps> =
                                 <Eye className="w-4 h-4" />
                               </button>
 
+                              {onEditInspection && (
+                                <button
+                                  type="button"
+                                  onClick={() => onEditInspection(insp)}
+                                  className="p-1.5 rounded-lg border border-sky-300 bg-sky-50 hover:bg-[#1B65A6] text-[#0B2C5F] hover:text-white transition-colors cursor-pointer"
+                                  title="Edit Data Inputan Ini"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              )}
+
                               <button
                                 type="button"
                                 onClick={() => setConfirmDeleteId(insp.id)}
@@ -871,10 +885,20 @@ export const AdminInspectionRecapView: React.FC<AdminInspectionRecapViewProps> =
                                   </div>
 
                                   <div className="flex items-center gap-2">
+                                    {onEditInspection && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onEditInspection(insp)}
+                                        className="px-3 py-1.5 rounded-lg bg-[#1B65A6] hover:bg-[#0B2C5F] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                        Edit Data Inputan
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => onSelectInspection(insp)}
-                                      className="px-3 py-1.5 rounded-lg bg-[#0B2C5F] text-white text-xs font-semibold inline-flex items-center gap-1.5"
+                                      className="px-3 py-1.5 rounded-lg bg-[#0B2C5F] text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                                     >
                                       <Eye className="w-3.5 h-3.5" />
                                       Buka Lembar Blangko Lengkap

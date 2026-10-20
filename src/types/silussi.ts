@@ -235,6 +235,7 @@ export interface ActivityLog {
     | 'APPROVE_ACCOUNT'
     | 'REJECT_ACCOUNT'
     | 'CREATE_INSPECTION'
+    | 'UPDATE_INSPECTION'
     | 'UPDATE_FOLLOWUP'
     | 'EXPORT_REPORT';
   summary: string;
