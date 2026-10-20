@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   UserPlus,
   LogIn,
@@ -7,6 +7,8 @@ import {
   AlertCircle,
   ArrowRight,
   Radio,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { SiLussiLogo } from './SiLussiLogo';
 import {
@@ -35,15 +37,10 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingNoticeId, setPendingNoticeId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-
-  // Always start with empty identifier & password when entering the login gate
-  useEffect(() => {
-    setIdentifier('');
-    setPassword('');
-  }, []);
 
   // Registration state
   const [regName, setRegName] = useState('');
@@ -390,15 +387,25 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
         )}
 
         {mode === 'login' ? (
-          <form onSubmit={handleLoginSubmit} className="space-y-4" autoComplete="off">
+          <form
+            onSubmit={handleLoginSubmit}
+            className="space-y-4"
+            autoComplete="on"
+            method="post"
+            action="#"
+          >
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label
+                htmlFor="username"
+                className="block text-xs font-semibold text-slate-700 mb-1.5"
+              >
                 NIP / Email / Nama Akun Terdaftar
               </label>
               <input
+                id="username"
                 type="text"
-                name="silussi_nip_username"
-                autoComplete="off"
+                name="username"
+                autoComplete="username"
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
@@ -408,19 +415,58 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Kata Sandi
-              </label>
-              <input
-                type="password"
-                name="silussi_secure_password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#1B65A6] focus:ring-2 focus:ring-[#1B65A6]/20 outline-none transition-all"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="current-password"
+                  className="block text-xs font-semibold text-slate-700"
+                >
+                  Kata Sandi
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="text-[11px] font-semibold text-[#1B65A6] hover:text-[#0B2C5F] inline-flex items-center gap-1 cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5" />
+                      Sembunyikan Sandi
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      Lihat Kata Sandi
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  id="current-password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-3.5 pr-10 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-[#1B65A6] focus:ring-2 focus:ring-[#1B65A6]/20 outline-none transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                  title={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <button
