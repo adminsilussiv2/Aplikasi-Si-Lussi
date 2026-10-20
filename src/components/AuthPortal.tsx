@@ -531,43 +531,6 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             </button>
           </form>
         )}
-
-        {/* Quick Test / Multi-Device Access Helpers */}
-        <div className="mt-6 pt-5 border-t border-slate-100">
-          <div className="text-[11px] font-semibold text-slate-500 mb-2 flex items-center justify-between">
-            <span>Bantuan Masuk Cepat (Akun Uji Coba Multi-Device):</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('login');
-                setIdentifier('199806232022031010');
-                setPassword('Silussi-v2');
-                setErrorMessage(null);
-                setPendingNoticeId(null);
-              }}
-              className="p-2.5 rounded-lg bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 text-left transition-colors cursor-pointer"
-            >
-              <div className="font-bold text-[#0B2C5F]">Administrator Pengelola</div>
-              <div className="text-[11px] text-slate-500 font-mono">199806232022031010</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode('login');
-                setIdentifier('198610072009031004');
-                setPassword('gggjjjrrr');
-                setErrorMessage(null);
-                setPendingNoticeId(null);
-              }}
-              className="p-2.5 rounded-lg bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-left transition-colors cursor-pointer"
-            >
-              <div className="font-bold text-emerald-800">Inspektor Ganjar (Aktif)</div>
-              <div className="text-[11px] text-slate-500 font-mono">198610072009031004</div>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
