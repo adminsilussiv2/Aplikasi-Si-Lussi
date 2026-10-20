@@ -8,6 +8,7 @@ import {
   UserPlus,
   RefreshCw,
   FileSpreadsheet,
+  History,
 } from 'lucide-react';
 import {
   BALAI_PSDA_OPTIONS,
@@ -25,6 +26,7 @@ interface AdminManagementViewProps {
   ) => Promise<UserAccount> | UserAccount;
   onManualRefresh?: () => void;
   onNavigateToRekap?: () => void;
+  onNavigateToLogs?: () => void;
   totalInspectionsCount?: number;
 }
 
@@ -36,6 +38,7 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
   onRegisterInspector,
   onManualRefresh,
   onNavigateToRekap,
+  onNavigateToLogs,
   totalInspectionsCount,
 }) => {
   const [balaiFilter, setBalaiFilter] = useState<string>('ALL');
@@ -165,6 +168,18 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
               Pilihan Rekap Semua Inputan {totalInspectionsCount !== undefined ? `(${totalInspectionsCount})` : ''}
+            </button>
+          )}
+
+          {onNavigateToLogs && (
+            <button
+              type="button"
+              onClick={onNavigateToLogs}
+              className="px-3.5 py-2 rounded-lg bg-[#0B2C5F] hover:bg-[#1B65A6] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              title="Buka rekam jejak log aktivitas sistem (Audit Trail)"
+            >
+              <History className="w-3.5 h-3.5 text-amber-300" />
+              Log Kegiatan Sistem
             </button>
           )}
 

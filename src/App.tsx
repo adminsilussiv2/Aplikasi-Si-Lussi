@@ -15,6 +15,7 @@ import {
   Waves,
   Building2,
   FileSpreadsheet,
+  History,
 } from 'lucide-react';
 import {
   ActivityLog,
@@ -35,6 +36,7 @@ import { InspectionInputWorkspace } from './components/InspectionInputWorkspace'
 import { InspectionDetailModal } from './components/InspectionDetailModal';
 import { AdminManagementView } from './components/AdminManagementView';
 import { AdminInspectionRecapView } from './components/AdminInspectionRecapView';
+import { AdminActivityLogsView } from './components/AdminActivityLogsView';
 import {
   createFirestoreActivityLog,
   subscribeFirestoreAccounts,
@@ -62,7 +64,8 @@ type ActiveTab =
   | 'input_fisik'
   | 'input_prasarana'
   | 'accounts'
-  | 'rekap';
+  | 'rekap'
+  | 'logs';
 
 function getAccountTimestamp(u: UserAccount): number {
   const regTime = new Date(u.registeredAt || 0).getTime() || 0;
@@ -882,6 +885,27 @@ export default function App() {
                     </span>
                   )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveNav('logs');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    activeNav === 'logs'
+                      ? 'bg-[#1B65A6] text-white shadow-xs'
+                      : 'text-sky-100/80 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <History className="w-4 h-4 shrink-0 text-amber-300" />
+                    <span>Log Kegiatan Sistem</span>
+                  </span>
+                  <span className="font-mono text-[11px] bg-white/15 px-1.5 py-0.5 rounded text-sky-200">
+                    {activityLogs.length}
+                  </span>
+                </button>
               </>
             )}
           </nav>
@@ -1006,6 +1030,18 @@ export default function App() {
                 >
                   Persetujuan Inspektor ({pendingAccountsCount})
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveNav('logs')}
+                  className={`hover:text-[#0B2C5F] transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    activeNav === 'logs'
+                      ? 'text-[#0B2C5F] font-bold underline underline-offset-4'
+                      : ''
+                  }`}
+                >
+                  Log Kegiatan ({activityLogs.length})
+                </button>
               </>
             )}
           </nav>
@@ -1104,7 +1140,17 @@ export default function App() {
               onRegisterInspector={handleRegisterInspector}
               onManualRefresh={syncUsersWithServer}
               onNavigateToRekap={() => setActiveNav('rekap')}
+              onNavigateToLogs={() => setActiveNav('logs')}
               totalInspectionsCount={inspections.length}
+            />
+          )}
+
+          {isAdmin && activeNav === 'logs' && (
+            <AdminActivityLogsView
+              logs={activityLogs}
+              currentUser={currentUser}
+              onNavigateToRekap={() => setActiveNav('rekap')}
+              onNavigateToAccounts={() => setActiveNav('accounts')}
             />
           )}
         </main>
