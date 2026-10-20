@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   UserPlus,
   LogIn,
@@ -38,6 +38,12 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingNoticeId, setPendingNoticeId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  // Always start with empty identifier & password when entering the login gate
+  useEffect(() => {
+    setIdentifier('');
+    setPassword('');
+  }, []);
 
   // Registration state
   const [regName, setRegName] = useState('');
@@ -211,6 +217,8 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             type="button"
             onClick={() => {
               setMode('login');
+              setIdentifier('');
+              setPassword('');
               setErrorMessage(null);
             }}
             className={`flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 cursor-pointer ${
@@ -226,6 +234,8 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
             type="button"
             onClick={() => {
               setMode('register');
+              setIdentifier('');
+              setPassword('');
               setErrorMessage(null);
               setPendingNoticeId(null);
             }}
@@ -298,17 +308,6 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                       ? 'Mengaktifkan...'
                       : 'Setujui & Buka Akun Sekarang'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIdentifier('199806232022031010');
-                      setPassword('Silussi-v2');
-                      setPendingNoticeId(null);
-                    }}
-                    className="px-2.5 py-1.5 text-xs text-[#0B2C5F] hover:underline cursor-pointer"
-                  >
-                    Masuk sebagai Admin
-                  </button>
                 </div>
               </>
             )}
@@ -376,7 +375,8 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                     type="button"
                     onClick={() => {
                       setMode('login');
-                      setIdentifier(liveRegisteredUser.nip);
+                      setIdentifier('');
+                      setPassword('');
                       setPendingNoticeId(liveRegisteredUser.id);
                     }}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0B2C5F] hover:underline cursor-pointer ml-1"
@@ -390,13 +390,15 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
         )}
 
         {mode === 'login' ? (
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <form onSubmit={handleLoginSubmit} className="space-y-4" autoComplete="off">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 NIP / Email / Nama Akun Terdaftar
               </label>
               <input
                 type="text"
+                name="silussi_nip_username"
+                autoComplete="off"
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
@@ -411,6 +413,8 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
               </label>
               <input
                 type="password"
+                name="silussi_secure_password"
+                autoComplete="new-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
